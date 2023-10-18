@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string>
+#include <iostream>
 #define _BSD_SOURCE
 #define handle_error(msg) \
            do { perror(msg); exit(EXIT_FAILURE); } while (0)
@@ -21,10 +22,11 @@ class Bag {
 
     public:
         Bag() {
-            map = (char*)mmap(NULL, mlen, mprot, mflags, -1, 0);
+            map = (value_type*)mmap(NULL, mlen, mprot, mflags, -1, 0);
             if (map == MAP_FAILED) {
                 handle_error("mmap");
             }
+            std::cout << "page size" << mlen << std::endl;
         }
 
         ~Bag() {
@@ -36,13 +38,15 @@ class Bag {
 
         //insert an item into the bag
         void insert(const value_type &item) {
-            if(moffset + sizeof(value_type) >= mlen) {
+            if((msize * sizeof(value_type)) + sizeof(value_type) >= mlen) {
+                std::cout << "resizing" << std::endl;
                 resize();
             }
             //don't think i have to memcpy every time but gonna leave this here just in case
             /*memcpy(item,addr+offset,sizeof(value_type));*/
             map[msize] = item;
-            msize++;
+            msize++;    
+            // moffset += sizeof(value_type);
         };
 
         //remove a specific item from the bag
@@ -82,10 +86,10 @@ class Bag {
         value_type* fetch_if(Function fn) {
             for(size_t i = 0; i < msize; i++) {
                 if(fn(map[i])) {
-                    return (value_type*)map[i];
+                    return &(map[i]);
                 }
             }
-            return nullptr;
+            return NULL;
         };
         
         //applies a function to all items
@@ -109,7 +113,9 @@ class Bag {
 
         //resize bag to allow for more items (i think for now just gonna double it every time)
         void resize() {
-            map = (char*)mremap(map, mlen, mlen*2, mremap_flags);
+            map = (value_type*)mremap(map, mlen, mlen*2, mremap_flags);
+            mlen *= 2;
+            std::cout << "new mlen: " << mlen << std::endl;
             if (map == MAP_FAILED) {
                 handle_error("mremap");
             }
@@ -122,10 +128,10 @@ class Bag {
         bool isempty(){return (msize == 0 ? 1 : 0);};
     
     private:
-        char *map;
-        size_t mlen = sizeof(value_type)*10;
+        value_type *map;
+        size_t mlen = (size_t)sysconf(_SC_PAGESIZE)/10;
         int mprot = PROT_READ | PROT_WRITE;
-        int mflags = MAP_SHARED | MAP_ANONYMOUS;
+        int mflags = MAP_PRIVATE | MAP_ANONYMOUS;
         int mremap_flags = MREMAP_MAYMOVE;
         int mfd = -1;
         size_t msize = 0;
