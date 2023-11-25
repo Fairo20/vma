@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string>
+#include <cmath>
 #include <iostream>
 #define _BSD_SOURCE
 #define handle_error(msg) \
@@ -26,7 +27,7 @@ class Bag {
             if (map == MAP_FAILED) {
                 handle_error("mmap");
             }
-            std::cout << "page size" << mlen << std::endl;
+            //std::cout << "page size" << mlen << std::endl;
         }
 
         ~Bag() {
@@ -39,7 +40,7 @@ class Bag {
         //insert an item into the bag
         void insert(const value_type &item) {
             if((msize * sizeof(value_type)) + sizeof(value_type) >= mlen) {
-                std::cout << "resizing" << std::endl;
+                //std::cout << "resizing" << std::endl;
                 resize();
             }
             //don't think i have to memcpy every time but gonna leave this here just in case
@@ -66,13 +67,13 @@ class Bag {
         
         //remove all items that fit a value function
         template <typename Function>
-        int deleteif(Function fn) {
+        int removeif(Function fn) {
             int numDeleted = 0;
             for(size_t i = 0; i < msize; i++) {
                 if(fn(map[i])) {
                     value_type temp = map[msize-1];
                     map[i] = map[msize-1];
-                    map[msize-1] = NULL;
+                    ~map[msize-1];
                     msize--;
                     i--;
                     numDeleted++;
@@ -102,24 +103,39 @@ class Bag {
 
         //empty bag
         void clear() {
-            madvise(map, mlen, MADV_DONTNEED);
+            for(size_t i = 0; i < msize; i++) {
+                ~map[i];
+            }
+            madvise(map+(size_t)sysconf(_SC_PAGESIZE), mlen, MADV_DONTNEED);
+            mlen = (size_t)sysconf(_SC_PAGESIZE);
             msize = 0;
         };
 
         //replace bag items with another bag's items (low priority rn will develop later)
-        // void swap(self_type &s) {
-
-        // };
+        void swap(self_type &s) {
+            std::swap(map, s.map);
+            std::swap(mlen, s.mlen);
+            std::swap(msize, s.msize);
+        };
 
         //resize bag to allow for more items (i think for now just gonna double it every time)
         void resize() {
             map = (value_type*)mremap(map, mlen, mlen*2, mremap_flags);
             mlen *= 2;
-            std::cout << "new mlen: " << mlen << std::endl;
+            //std::cout << "new mlen: " << mlen << std::endl;
             if (map == MAP_FAILED) {
                 handle_error("mremap");
             }
         };
+
+        void shrinktofit() {
+            if((msize * sizeof(value_type)) + (size_t)sysconf(_SC_PAGESIZE) < mlen) {
+                //pages used: ceil((msize * sizeof(value_type))/(size_t)sysconf(_SC_PAGESIZE))
+                //pages allocated: mlen/(size_t)sysconf(_SC_PAGESIZE)
+                madvise(map+(ceil((msize * sizeof(value_type))/(size_t)sysconf(_SC_PAGESIZE))*(size_t)sysconf(_SC_PAGESIZE)), mlen);
+                mlen = ceil((msize * sizeof(value_type))/(size_t)sysconf(_SC_PAGESIZE))*(size_t)sysconf(_SC_PAGESIZE);
+            }
+        }
 
         //return amount of items in bag
         size_t size() {return msize;};
@@ -127,13 +143,12 @@ class Bag {
         //return if bag is empty or not
         bool isempty(){return (msize == 0 ? 1 : 0);};
     
-    private:
+    protected:
         value_type *map;
-        size_t mlen = (size_t)sysconf(_SC_PAGESIZE)/10;
+        size_t mlen = (size_t)sysconf(_SC_PAGESIZE);
         int mprot = PROT_READ | PROT_WRITE;
         int mflags = MAP_PRIVATE | MAP_ANONYMOUS;
         int mremap_flags = MREMAP_MAYMOVE;
         int mfd = -1;
         size_t msize = 0;
-        off_t moffset = 0;
 };
