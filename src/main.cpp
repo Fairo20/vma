@@ -4,7 +4,7 @@
 #include <iostream>
 #include <chrono>
 
-int n = 100000000;
+int n = 1000000;
 
 // #define index_set_test
 #define index_set_benchmark
