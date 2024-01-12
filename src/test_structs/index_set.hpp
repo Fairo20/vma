@@ -105,12 +105,18 @@ class Index_Set_Control {
             size = 0;
         }
 
+        int returnLoops() {return insertLoops;}
+
     private:
         value_type *mset;
         int *tombstones;
         size_t capacity = (size_t)sysconf(_SC_PAGESIZE);
+        // size_t capacity = 64;
         size_t size = 0;
         int max_probe = pow((int)log2(capacity),2);
+        // int max_probe = 8;
+
+        int insertLoops = 0;
 
         int hashInsert(value_type *set, int *tombstone, value_type val, auto hsh, int curr_probe) {            
             if(tombstone[hsh] == 0) {
@@ -127,9 +133,11 @@ class Index_Set_Control {
                 int i = 1;
                 while(i + curr_probe < max_probe) {
                     if(tombstone[hsh + i] == 0) {
+                        // insertLoops++;
                         break;
                     }
                     if(set[hsh + i] == val) {
+                        insertLoops++;
                         return -1;
                     }
                     i++;
@@ -143,6 +151,7 @@ class Index_Set_Control {
             else if(tombstone[hsh] == 1) {
                 if(set[hsh] == val) {
                     // printf("attempt to insert duplicate %d, returning\n", val);
+                    insertLoops++;
                     return -1;
                 }
                 if(curr_probe == max_probe) {
@@ -153,6 +162,7 @@ class Index_Set_Control {
                     hashInsert(set, tombstone, val, hsh+1, curr_probe+1);
                 }
             }
+            insertLoops++;
             return 0;
         };
 

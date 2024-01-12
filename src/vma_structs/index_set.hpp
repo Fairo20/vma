@@ -35,20 +35,30 @@ class Index_Set {
 
         //is this a true set that does not allow duplicates? if so need to search the entire probe distance before inserting
         void insert(value_type val) {
-            auto hsh = std::hash<value_type>{}(val)%capacity;
+            auto hsh = Hash{}(val)%capacity;
             // printf("entered put with value %d and hash %d\n", val, hsh);
             hashInsert(mset, tombstones, val, hsh, 0);
         };
 
         bool find(value_type val) {
-            auto hsh = std::hash<value_type>{}(val)%capacity;
-            for(int i = 0; i < max_probe; i++) {
-                if(tombstones[hsh] == 0) {
-                    return false;
-                }
-                else {
-                    if(mset[hsh] == val && tombstones[hsh] == 1) {
-                        return true;
+            auto hsh = Hash{}(val)%capacity;
+            int i = 1;
+            int j = 0;
+            int probe_level = init_probe;
+            while(i < num_levels) {
+                while(j < max_probe) {
+                    if(tombstones[hsh] == 0) {
+                        return false;
+                    }
+                    else {
+                        if(mset[hsh] == val && tombstones[hsh] == 1) {
+                            return true;
+                        }
+                    }
+                    if(j >= probe_level) {
+                        i++;
+                        j = 0;
+                        probe_level *= 2;
                     }
                 }
             }
@@ -58,8 +68,8 @@ class Index_Set {
         //do i have to deconstrunct objects deleted or can i just leave them to be overwritten
         void remove(value_type val) {
             // printf("begin remove for val %d\n", val);
-            auto hsh = std::hash<value_type>{}(val)%capacity;
-            for(int i = 0; i < max_probe; i++) {
+            auto hsh = Hash{}(val)%capacity;
+            for(int i = 0; i < max_probe; i++) {        //maximum probe loc
                 if(tombstones[hsh + i] == 0) {
                     // printf("val not found, returning\n");
                     break;
@@ -111,7 +121,10 @@ class Index_Set {
         int *tombstones;
         size_t capacity = (size_t)sysconf(_SC_PAGESIZE);
         size_t size = 0;
-        int max_probe = (int)log2(capacity)**2;
+        int num_levels = 1;
+        int level_scale = 2;
+        int init_probe = 8;
+        int max_probe = 8;
         int mprot = PROT_READ | PROT_WRITE;
         int mflags = MAP_PRIVATE | MAP_ANONYMOUS;
         int mremap_flags = MREMAP_MAYMOVE;
@@ -123,14 +136,14 @@ class Index_Set {
                 set[hsh] = val;
                 tombstone[hsh] = 1;
                 size++;
-                if(size >= capacity * 3 / 4) {
+                if(size >= capacity * 3 / 4) {      //remove this
                     resize();
                 }
                 // printf("inserted %d at %d\n", set[hsh], hsh);
             }
             else if(tombstone[hsh] == 2) {
                 int i = 1;
-                while(i + curr_probe < max_probe) {
+                while(i + curr_probe < max_probe) {     //maximum probe loc
                     if(tombstone[hsh + i] == 0) {
                         break;
                     }
@@ -150,9 +163,9 @@ class Index_Set {
                     // printf("attempt to insert duplicate %d, returning\n", val);
                     return -1;
                 }
-                if(curr_probe == max_probe) {
+                if(curr_probe == max_probe) {           //maximum probe loc
                     resize();
-                    hashInsert(set, tombstone, val, hsh+1, curr_probe+1);
+                    hashInsert(set, tombstone, val, hsh+1, curr_probe+1);       //am i recomputing hash here?
                 }
                 else {
                     hashInsert(set, tombstone, val, hsh+1, curr_probe+1);
@@ -162,8 +175,28 @@ class Index_Set {
         };
 
         void resize() {
-            mset = (value_type*)mremap(mset, capacity, capacity*2, mremap_flags);
-            tombstones = (int*)mremap(tombstones, capacity, capacity*2, mremap_flags);
-            
+            //resize mapping
+            mset = (value_type*)mremap(mset, capacity, capacity*(level_scale+1), mremap_flags);
+            tombstones = (int*)mremap(tombstones, capacity, capacity*(level_scale+1), mremap_flags);
+            //check against boundary calculation function
+
+            //check max probe distance against calc
+
+            num_levels++;
+            max_probe *= level_scale;
         };
+
+        int calcProbe(int index) {
+            int cap = capacity;
+            int bound;
+            int lvls = num_levels;
+            while(cap >= (size_t)sysconf(_SC_PAGESIZE)) {
+                bound = cap / (level_scale+1);
+                if(index > bound && index < cap) {
+                    return lvls*8;      //init prob distance times level finds level probe
+                }
+                cap = bound;
+            }
+            return 8;
+        }
 };

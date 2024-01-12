@@ -1,6 +1,6 @@
 CC=g++
 CFLAGS=-I.
-DEPS = bag/bag.hpp
+DEPS = $(wildcard *.hpp)
 OBJ = main.cpp
 
 %.o: %.cpp $(DEPS)
