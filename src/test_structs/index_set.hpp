@@ -107,10 +107,15 @@ class Index_Set_Control {
 
         int returnLoops() {return insertLoops;}
 
+        size_t getSize() {return size;}
+        size_t getCapacity() {return capacity;}
+
+        int residency_rate() {return size*100/capacity;}
+
     private:
         value_type *mset;
         int *tombstones;
-        size_t capacity = (size_t)sysconf(_SC_PAGESIZE);
+        size_t capacity = (size_t)sysconf(_SC_PAGESIZE) / sizeof(value_type);
         // size_t capacity = 64;
         size_t size = 0;
         int max_probe = pow((int)log2(capacity),2);

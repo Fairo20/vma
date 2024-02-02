@@ -54,16 +54,16 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/crnicholls20/Documents/research/speedy_structures
+CMAKE_SOURCE_DIR = /home/crnicholls20/Documents/research/vma
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/crnicholls20/Documents/research/speedy_structures/build
+CMAKE_BINARY_DIR = /home/crnicholls20/Documents/research/vma/build
 
 #=============================================================================
 # Directory level rules for the build root directory
 
 # The main recursive "all" target.
-all: CMakeFiles/speedy_structures.dir/all
+all: CMakeFiles/vmalib.dir/all
 .PHONY : all
 
 # The main recursive "preinstall" target.
@@ -71,34 +71,34 @@ preinstall:
 .PHONY : preinstall
 
 # The main recursive "clean" target.
-clean: CMakeFiles/speedy_structures.dir/clean
+clean: CMakeFiles/vmalib.dir/clean
 .PHONY : clean
 
 #=============================================================================
-# Target rules for target CMakeFiles/speedy_structures.dir
+# Target rules for target CMakeFiles/vmalib.dir
 
 # All Build rule for target.
-CMakeFiles/speedy_structures.dir/all:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/speedy_structures.dir/build.make CMakeFiles/speedy_structures.dir/depend
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/speedy_structures.dir/build.make CMakeFiles/speedy_structures.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/crnicholls20/Documents/research/speedy_structures/build/CMakeFiles --progress-num=1,2 "Built target speedy_structures"
-.PHONY : CMakeFiles/speedy_structures.dir/all
+CMakeFiles/vmalib.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/vmalib.dir/build.make CMakeFiles/vmalib.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/vmalib.dir/build.make CMakeFiles/vmalib.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/crnicholls20/Documents/research/vma/build/CMakeFiles --progress-num=1,2 "Built target vmalib"
+.PHONY : CMakeFiles/vmalib.dir/all
 
 # Build rule for subdir invocation for target.
-CMakeFiles/speedy_structures.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/crnicholls20/Documents/research/speedy_structures/build/CMakeFiles 2
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/speedy_structures.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/crnicholls20/Documents/research/speedy_structures/build/CMakeFiles 0
-.PHONY : CMakeFiles/speedy_structures.dir/rule
+CMakeFiles/vmalib.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/crnicholls20/Documents/research/vma/build/CMakeFiles 2
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/vmalib.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/crnicholls20/Documents/research/vma/build/CMakeFiles 0
+.PHONY : CMakeFiles/vmalib.dir/rule
 
 # Convenience name for target.
-speedy_structures: CMakeFiles/speedy_structures.dir/rule
-.PHONY : speedy_structures
+vmalib: CMakeFiles/vmalib.dir/rule
+.PHONY : vmalib
 
 # clean rule for target.
-CMakeFiles/speedy_structures.dir/clean:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/speedy_structures.dir/build.make CMakeFiles/speedy_structures.dir/clean
-.PHONY : CMakeFiles/speedy_structures.dir/clean
+CMakeFiles/vmalib.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/vmalib.dir/build.make CMakeFiles/vmalib.dir/clean
+.PHONY : CMakeFiles/vmalib.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

@@ -5,7 +5,7 @@
 #include <iostream>
 #include <chrono>
 
-int n = 10000000;
+int n = 100000000;
 
 // #define bag
 // #define index_set_test
@@ -14,7 +14,7 @@ int n = 10000000;
 
 #ifdef index_set_benchmark
 #define benchmark
-// #define index_set
+#define index_set
 #define index_set_vma
 #endif
 
@@ -125,7 +125,7 @@ int main(int argc, char** argv) {
 #ifdef benchmark
     std::vector<int> temp;
     for(int i = 0; i < n; i++) {
-        temp.push_back(rand());
+        temp.push_back(i);
     }
     std::chrono::time_point<std::chrono::system_clock> m_StartTime;
     std::chrono::time_point<std::chrono::system_clock> m_EndTime;
@@ -133,7 +133,10 @@ int main(int argc, char** argv) {
     m_StartTime = std::chrono::system_clock::now();
     for(int i = 0; i < n; i++) {
         vma_struct.insert(temp[i]);
+        // printf("iteration %d: %f\n", i, temp[i]);
+        // vma_struct.for_each(print);
     }
+    printf("residency rate: %d\n", vma_struct.residency_rate());
     // vma_struct.removeif(isEven);
     // for(int i = 0; i < n; i+=2) {
     //     vma_struct.insert(i);
@@ -141,13 +144,14 @@ int main(int argc, char** argv) {
     // vma_struct.clear();
     m_EndTime = std::chrono::system_clock::now();
     double vma_struct_time = std::chrono::duration_cast<std::chrono::milliseconds>(m_EndTime - m_StartTime).count();
-    printf("vma_struct time: %f with loops: %d\n", vma_struct_time, vma_struct.returnLoops());
+    printf("vma_struct time: %f\n", vma_struct_time);
     #endif
     #ifdef std_test
     m_StartTime = std::chrono::system_clock::now();
     for(int i = 0; i < n; i++) {
         std_struct.insert(temp[i]);
     }
+    printf("residency rate: %d\n", std_struct.residency_rate());
     // std_struct.removeif(isEven);
     // // std_struct.for_each(print);
     // for(int i = 0; i < n; i+=2) {

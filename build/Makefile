@@ -57,10 +57,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/crnicholls20/Documents/research/speedy_structures
+CMAKE_SOURCE_DIR = /home/crnicholls20/Documents/research/vma
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/crnicholls20/Documents/research/speedy_structures/build
+CMAKE_BINARY_DIR = /home/crnicholls20/Documents/research/vma/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -87,9 +87,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/crnicholls20/Documents/research/speedy_structures/build/CMakeFiles /home/crnicholls20/Documents/research/speedy_structures/build//CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/crnicholls20/Documents/research/vma/build/CMakeFiles /home/crnicholls20/Documents/research/vma/build//CMakeFiles/progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/crnicholls20/Documents/research/speedy_structures/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/crnicholls20/Documents/research/vma/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -117,24 +117,24 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named speedy_structures
+# Target rules for targets named vmalib
 
 # Build rule for target.
-speedy_structures: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 speedy_structures
-.PHONY : speedy_structures
+vmalib: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 vmalib
+.PHONY : vmalib
 
 # fast build rule for target.
-speedy_structures/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/speedy_structures.dir/build.make CMakeFiles/speedy_structures.dir/build
-.PHONY : speedy_structures/fast
+vmalib/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/vmalib.dir/build.make CMakeFiles/vmalib.dir/build
+.PHONY : vmalib/fast
 
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
 
 # target to build an object file
 src/main.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/speedy_structures.dir/build.make CMakeFiles/speedy_structures.dir/src/main.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/vmalib.dir/build.make CMakeFiles/vmalib.dir/src/main.cpp.o
 .PHONY : src/main.cpp.o
 
 src/main.i: src/main.cpp.i
@@ -142,7 +142,7 @@ src/main.i: src/main.cpp.i
 
 # target to preprocess a source file
 src/main.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/speedy_structures.dir/build.make CMakeFiles/speedy_structures.dir/src/main.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/vmalib.dir/build.make CMakeFiles/vmalib.dir/src/main.cpp.i
 .PHONY : src/main.cpp.i
 
 src/main.s: src/main.cpp.s
@@ -150,7 +150,7 @@ src/main.s: src/main.cpp.s
 
 # target to generate assembly for a file
 src/main.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/speedy_structures.dir/build.make CMakeFiles/speedy_structures.dir/src/main.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/vmalib.dir/build.make CMakeFiles/vmalib.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
 # Help Target
@@ -161,7 +161,7 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... speedy_structures"
+	@echo "... vmalib"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"

@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.13)  # CMake version check
-project(speedy_structures)               # Create project "simple_example"
+project(vmalib)               # Create project "simple_example"
 set(CMAKE_CXX_STANDARD 14)   
 
-add_subdirectory(src)
+FILE(GLOB_RECURSE SOURCES "src/*.cpp")
+FILE(GLOB_RECURSE HEADERS "src/*.h")
+
+ADD_EXECUTABLE(${CMAKE_PROJECT_NAME} ${SOURCES} ${HEADERS})
+
+SET_TARGET_PROPERTIES(${CMAKE_PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
+SET_TARGET_PROPERTIES(${CMAKE_PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
+
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -O3")

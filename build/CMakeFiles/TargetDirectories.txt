@@ -1,3 +1,3 @@
-/home/crnicholls20/Documents/research/speedy_structures/build/CMakeFiles/speedy_structures.dir
-/home/crnicholls20/Documents/research/speedy_structures/build/CMakeFiles/edit_cache.dir
-/home/crnicholls20/Documents/research/speedy_structures/build/CMakeFiles/rebuild_cache.dir
+/home/crnicholls20/Documents/research/vma/build/CMakeFiles/vmalib.dir
+/home/crnicholls20/Documents/research/vma/build/CMakeFiles/edit_cache.dir
+/home/crnicholls20/Documents/research/vma/build/CMakeFiles/rebuild_cache.dir

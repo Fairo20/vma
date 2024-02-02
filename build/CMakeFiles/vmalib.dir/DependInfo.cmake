@@ -8,7 +8,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
-  "/home/crnicholls20/Documents/research/speedy_structures/src/main.cpp" "CMakeFiles/speedy_structures.dir/src/main.cpp.o" "gcc" "CMakeFiles/speedy_structures.dir/src/main.cpp.o.d"
+  "/home/crnicholls20/Documents/research/vma/src/main.cpp" "CMakeFiles/vmalib.dir/src/main.cpp.o" "gcc" "CMakeFiles/vmalib.dir/src/main.cpp.o.d"
   )
 
 # Targets to which this target links which contain Fortran sources.

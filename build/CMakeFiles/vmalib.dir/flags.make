@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/c++
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I/home/crnicholls20/Documents/research/speedy_structures/../src
+CXX_INCLUDES = 
 
-CXX_FLAGS = -std=gnu++14
+CXX_FLAGS =  -Wall -pedantic -O3 -std=gnu++17
 

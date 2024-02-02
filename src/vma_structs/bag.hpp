@@ -48,7 +48,7 @@ class Bag {
             map[msize] = item;
             msize++;    
             // moffset += sizeof(value_type);
-        };
+        }
 
         //remove a specific item from the bag
         int remove(const value_type &item) {
@@ -63,7 +63,7 @@ class Bag {
                 }
             }
             return 0;
-        };
+        }
         
         //remove all items that fit a value function
         template <typename Function>
@@ -80,7 +80,7 @@ class Bag {
                 }
             }
             return numDeleted;
-        };
+        }
 
         //retrieve all items that fit a value function
         template <typename Function>
@@ -91,7 +91,7 @@ class Bag {
                 }
             }
             return NULL;
-        };
+        }
         
         //applies a function to all items
         template <typename Function>
@@ -99,7 +99,7 @@ class Bag {
             for(size_t i = 0; i < msize; i++) {
                 fn(map[i]);
             }
-        };
+        }
 
         //empty bag
         void clear() {
@@ -109,14 +109,14 @@ class Bag {
             madvise(map+(size_t)sysconf(_SC_PAGESIZE), mlen, MADV_DONTNEED);
             mlen = (size_t)sysconf(_SC_PAGESIZE);
             msize = 0;
-        };
+        }
 
         //replace bag items with another bag's items (low priority rn will develop later)
         void swap(self_type &s) {
             std::swap(map, s.map);
             std::swap(mlen, s.mlen);
             std::swap(msize, s.msize);
-        };
+        }
 
         //resize bag to allow for more items (i think for now just gonna double it every time)
         void resize() {
@@ -126,22 +126,22 @@ class Bag {
             if (map == MAP_FAILED) {
                 handle_error("mremap");
             }
-        };
+        }
 
         void shrinktofit() {
             if((msize * sizeof(value_type)) + (size_t)sysconf(_SC_PAGESIZE) < mlen) {
                 //pages used: ceil((msize * sizeof(value_type))/(size_t)sysconf(_SC_PAGESIZE))
                 //pages allocated: mlen/(size_t)sysconf(_SC_PAGESIZE)
-                madvise(map+(ceil((msize * sizeof(value_type))/(size_t)sysconf(_SC_PAGESIZE))*(size_t)sysconf(_SC_PAGESIZE)), mlen);
+                madvise(map+(ceil((msize * sizeof(value_type))/(size_t)sysconf(_SC_PAGESIZE))*(size_t)sysconf(_SC_PAGESIZE)), mlen, MADV_DONTNEED);
                 mlen = ceil((msize * sizeof(value_type))/(size_t)sysconf(_SC_PAGESIZE))*(size_t)sysconf(_SC_PAGESIZE);
             }
         }
 
         //return amount of items in bag
-        size_t size() {return msize;};
+        size_t size() {return msize;}
 
         //return if bag is empty or not
-        bool isempty(){return (msize == 0 ? 1 : 0);};
+        bool isempty(){return (msize == 0 ? 1 : 0);}
     
     protected:
         value_type *map;
