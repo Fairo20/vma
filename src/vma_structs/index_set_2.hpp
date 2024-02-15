@@ -6,10 +6,12 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <string>
 #include <cmath>
 #include <iostream>
+#include <vector>
 #define _BSD_SOURCE
 #define handle_error(msg) \
            do { perror(msg); exit(EXIT_FAILURE); } while (0)
@@ -21,6 +23,10 @@ class Index_Set {
     using hash = Hash;
 
     public:
+        std::vector<int> res_vec;
+        std::vector<int> res_vec_2;
+        
+
         Index_Set(){
             mset = (value_type*)mmap(NULL, capacity*sizeof(value_type), mprot, mflags, -1, 0);
             if (mset == MAP_FAILED) {
@@ -34,6 +40,8 @@ class Index_Set {
             for(int i = 0; i < capacity; i++) {
                 tombstones[i] = 0;
             }
+            res_vec.push_back(0);
+            res_vec_2.push_back(capacity);
         };
         ~Index_Set(){
             munmap(mset, capacity);
@@ -45,7 +53,7 @@ class Index_Set {
             int curr_cap = init_cap;
             int curr_level = 0;
             auto hsh = Hash{}(val);
-            int i = hsh%curr_cap;
+            unsigned int i = hsh%curr_cap;
             int offset = 0;
             int insert_index = -1;
             int max_probe = 0;
@@ -94,6 +102,8 @@ class Index_Set {
                         // printf("hit max probe and last level\n");
                         if(insert_index < 0) {
                             resize(curr_cap);
+                            res_vec.push_back(0);
+                            res_vec_2.push_back(curr_cap*2);
                         }
                         continue;
                     }
@@ -101,15 +111,19 @@ class Index_Set {
                 }
                 offset += curr_cap;
                 curr_cap*=level_scale;
+                // printf("hash before: %d\n", hsh);
+                hsh = rotr32(hsh, 1);
+                // printf("hash after: %d\n", hsh);
                 i = hsh%curr_cap + offset;
-                // curr_probe*=level_scale;
+                curr_probe++;
                 // printf("exited j loop, new vals: offset = %d, curr_cap = %d, i = %d, curr_probe = %d\n", offset, curr_cap, i, curr_probe);
             }   
             // printf("exited i loop\n");
             if(insert_index >= 0) {
+                res_vec.at(curr_level-1) = res_vec.at(curr_level-1) + 1;
                 mset[insert_index] = val;
                 tombstones[insert_index] = 2; //replace with fingerprint
-                printf("max probe for val %d: %d\n", val, max_probe);
+                // printf("max probe for val %d: %d\n", val, max_probe);
                 size++;
             }
         }
@@ -302,6 +316,8 @@ class Index_Set {
             }
         };
 
+        
+
         int returnLoops() {return insertLoops;}
 
         size_t getSize() {return size;}
@@ -309,12 +325,15 @@ class Index_Set {
 
         int residency_rate() {return size*100/capacity;}
 
+        int get_num_levels() {return num_levels;}
+
+
     private:
         value_type *mset;
         int *tombstones;
         // 0 is empty, 1 is tombstone, anything else is fingerprint
-        // size_t capacity = (size_t)sysconf(_SC_PAGESIZE) / sizeof(value_type);
-        size_t capacity = 16;
+        size_t capacity = (size_t)sysconf(_SC_PAGESIZE) / sizeof(value_type);
+        // size_t capacity = 16;
         size_t size = 0; //amount of items in set
         // int init_probe = pow((int)log2(capacity),2);
         int num_levels = 1;
@@ -340,4 +359,13 @@ class Index_Set {
             capacity += (max_level_cap*level_scale);
             num_levels++;
         };
+
+        inline uint64_t rotr64 ( uint64_t x, int8_t r ) {
+            return (x >> r) | (x << (64 - r));
+        }
+
+        inline uint32_t rotr32 ( uint32_t x, int8_t r ) {
+            return (x >> r) | (x << (32 - r));
+        }
+
 };

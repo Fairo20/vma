@@ -28,6 +28,15 @@ class Vec_Bag {
             size++;
         };
 
+        bool find(value_type item) {
+            for(int i = 0; i < size; i++) {
+                if(mbag[i] == item) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         void remove(value_type item) {
             for(value_type mitem : mbag) {
                 if(item == mitem){

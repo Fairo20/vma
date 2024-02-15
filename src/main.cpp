@@ -4,50 +4,65 @@
 #include "vma_structs/index_set_2.hpp"
 #include <iostream>
 #include <chrono>
+#include <random>
 
-int n = 100000000;
+// size_t n = 1000000000;
+std::vector<size_t> nvals = {10000000, 100000000, 1000000000};
 
-// #define bag
+#define bag
 // #define index_set_test
 // #define index_set_test_vma
-#define index_set_benchmark
+// #define index_set_benchmark
+
+#ifdef bag
+    #define std_test
+    #define vma_test
+    // #define benchmark
+    #define benchmark_loop
+#endif
 
 #ifdef index_set_benchmark
-#define benchmark
-#define index_set
-#define index_set_vma
+    #define benchmark
+    #define index_set
+    #define index_set_vma
 #endif
 
 #ifdef index_set_test
-#define index_set_test
-#define index_set
+    #define index_set_test
+    #define index_set
 #endif
 
 #ifdef index_set_test_vma
-#define index_set_vma
-#define index_set_test
+    #define index_set_vma
+    #define index_set_test
 #endif
 
 //test
-bool isEven(int num) {return num%2==0 ? true : false;}
+bool isEven(size_t num) {return num%2==0 ? true : false;}
 
-void increment(int &num) {num++;}
+void increment(size_t &num) {num++;}
 
-void print(int item) {
+void print(size_t item) {
             // printf("%f\n",std::to_string(item));
             std::cout << item << std::endl;
         }
 
-int main(int argc, char** argv) {
-
+int main(size_t argc, char** argv) {
+srand(1);
 #ifdef index_set
-    Index_Set_Control<int> std_struct;
+    Index_Set_Control<size_t> std_struct;
     #define std_test
 #endif
 
 #ifdef index_set_vma
-    Index_Set<int> vma_struct;
+    Index_Set<size_t> vma_struct;
     #define vma_test
+#endif
+
+#ifdef bag
+    Bag<size_t> vma_struct;
+    // Vec_Bag<size_t> std_struct;
+    std::vector<size_t> std_struct;
 #endif
 
 #ifdef index_set_test
@@ -59,7 +74,7 @@ int main(int argc, char** argv) {
     // vma_struct.insert(5+8192);
     // vma_struct.insert(5+16384);
     // vma_struct.insert(5+32768);
-    for(int i = 0; i < 7; i++) {
+    for(size_t i = 0; i < 7; i++) {
         vma_struct.insert(i*16);
     }
     vma_struct.for_each(print);
@@ -75,7 +90,7 @@ int main(int argc, char** argv) {
     // std_struct.insert(5+8192);
     // std_struct.insert(5+16384);
     // std_struct.insert(5+32768);
-    for(int i = 0; i < 7; i++) {
+    for(size_t i = 0; i < 7; i++) {
         std_struct.insert(i*16);
     }
     std_struct.for_each(print);
@@ -86,22 +101,13 @@ int main(int argc, char** argv) {
     #endif
 #endif
 
-
-#ifdef bag
-    Bag<int> vma_struct;
-    Vec_Bag<int> std_struct;
-    #define std_test
-    #define vma_test
-    #define benchmark
-#endif
-
 #ifdef bagtest
     std::cout << "made bag" << std::endl;
     bag.insert(5);
     std::cout << "5" << std::endl;
     bag.insert(12);
     std::cout << "12" << std::endl;
-    int *temp = (bag.fetch_if(isEven));
+    size_t *temp = (bag.fetch_if(isEven));
     // std::cout << "fetch" << std::endl;
     std::cout << "addr: " << temp << " value: " << *temp << std::endl;
     bag.removeif(isEven);
@@ -123,24 +129,37 @@ int main(int argc, char** argv) {
 
     //begin bag time
 #ifdef benchmark
-    std::vector<int> temp;
-    for(int i = 0; i < n; i++) {
+    std::vector<size_t> temp;
+    int n = 2;
+    for(size_t i = 0; i < nvals.at(n); i++) {
         temp.push_back(i);
     }
     std::chrono::time_point<std::chrono::system_clock> m_StartTime;
     std::chrono::time_point<std::chrono::system_clock> m_EndTime;
     #ifdef vma_test
     m_StartTime = std::chrono::system_clock::now();
-    for(int i = 0; i < n; i++) {
+    std::string output;
+    for(size_t i = 0; i < nvals.at(n); i++) {
         vma_struct.insert(temp[i]);
         // printf("iteration %d: %f\n", i, temp[i]);
         // vma_struct.for_each(print);
+        // std::cin >> output;
     }
-    printf("residency rate: %d\n", vma_struct.residency_rate());
+    // std::cout << sbrk(0) << std::endl;
+    // for(size_t i = 0; i < n; i++) {
+    //     if(!(vma_struct.find(temp[i]))) {
+    //         printf("issue found: %d not inserted\n", temp[i]);
+    //     }
+    // }
+    // for(size_t i = 0; i < vma_struct.get_num_levels(); i++) {
+    //     printf("residency rate of level %d: %d / %d\n", i, vma_struct.res_vec.at(i), vma_struct.res_vec_2.at(i));
+    // }
+    // printf("residency rate: %d\n", vma_struct.residency_rate());
     // vma_struct.removeif(isEven);
-    // for(int i = 0; i < n; i+=2) {
+    // for(size_t i = 0; i < n; i+=2) {
     //     vma_struct.insert(i);
     // }
+    // printf("found vals after delete: %d\n", vma_struct.find(100001));
     // vma_struct.clear();
     m_EndTime = std::chrono::system_clock::now();
     double vma_struct_time = std::chrono::duration_cast<std::chrono::milliseconds>(m_EndTime - m_StartTime).count();
@@ -148,20 +167,95 @@ int main(int argc, char** argv) {
     #endif
     #ifdef std_test
     m_StartTime = std::chrono::system_clock::now();
-    for(int i = 0; i < n; i++) {
-        std_struct.insert(temp[i]);
+    for(size_t i = 0; i < nvals.at(n); i++) {
+        // std_struct.insert(temp[i]);
+        std_struct.push_back(temp[i]);
     }
-    printf("residency rate: %d\n", std_struct.residency_rate());
+    // for(size_t i = 0; i < n; i++) {
+    //     if(!(std_struct.find(temp[i]))) {
+    //         printf("issue found: %d not inserted\n", temp[i]);
+    //     }
+    // }
+    // printf("residency rate: %d\n", std_struct.residency_rate());
     // std_struct.removeif(isEven);
-    // // std_struct.for_each(print);
-    // for(int i = 0; i < n; i+=2) {
+    // std_struct.erase(std::remove_if(std_struct.begin(), std_struct.end(), isEven), std_struct.end());
+    // for(size_t i = 0; i < n; i+=2) {
     //     std_struct.insert(i);
     // }
     // std_struct.clear();
     m_EndTime = std::chrono::system_clock::now();
     double std_struct_time = std::chrono::duration_cast<std::chrono::milliseconds>(m_EndTime - m_StartTime).count();
     // bag.for_each(print); 
-    printf("std_struct time: %f with loops: %d\n", std_struct_time, std_struct.returnLoops());
+    printf("std_struct time: %f\n", std_struct_time);
+    std_struct.clear();
+    vma_struct.clear();
+    #endif
+    #endif
+
+#ifdef benchmark_loop
+    std::vector<size_t> temp;
+    for(size_t i = 0; i < nvals.back(); i++) {
+        temp.push_back(i);
+    }
+    std::chrono::time_point<std::chrono::system_clock> m_StartTime;
+    std::chrono::time_point<std::chrono::system_clock> m_EndTime;
+    for(size_t n : nvals) {
+        #ifdef vma_test
+        m_StartTime = std::chrono::system_clock::now();
+        std::string output;
+        for(size_t i = 0; i < n; i++) {
+            vma_struct.insert(temp[i]);
+            // printf("iteration %d: %f\n", i, temp[i]);
+            // vma_struct.for_each(print);
+            // std::cin >> output;
+        }
+        // for(size_t i = 0; i < n; i++) {
+        //     if(!(vma_struct.find(temp[i]))) {
+        //         printf("issue found: %d not inserted\n", temp[i]);
+        //     }
+        // }
+        for(size_t i = 0; i < n/100; i++) {
+            vma_struct.pop_back();
+        }
+        // for(size_t i = 0; i < vma_struct.get_num_levels(); i++) {
+        //     printf("residency rate of level %d: %d / %d\n", i, vma_struct.res_vec.at(i), vma_struct.res_vec_2.at(i));
+        // }
+        // printf("residency rate: %d\n", vma_struct.residency_rate());
+        // vma_struct.removeif(isEven);
+        // for(size_t i = 0; i < n; i+=2) {
+        //     vma_struct.insert(i);
+        // }
+        m_EndTime = std::chrono::system_clock::now();
+        double vma_struct_time = std::chrono::duration_cast<std::chrono::milliseconds>(m_EndTime - m_StartTime).count();
+        printf("%d vma_struct time: %f\n", n, vma_struct_time);
+        vma_struct.clear();
+        #endif
+        #ifdef std_test
+        m_StartTime = std::chrono::system_clock::now();
+        for(size_t i = 0; i < n; i++) {
+            std_struct.push_back(temp[i]);
+        }
+        // for(size_t i = 0; i < n; i++) {
+        //     if(!(std_struct.find(temp[i]))) {
+        //         printf("issue found: %d not inserted\n", temp[i]);
+        //     }
+        // }
+        for(size_t i = 0; i < n/100; i++) {
+            std_struct.pop_back();
+        }
+        // printf("residency rate: %d\n", std_struct.residency_rate());
+        // std_struct.removeif(isEven);
+        // std_struct.erase(std::remove_if(std_struct.begin(), std_struct.end(), isEven), std_struct.end());
+        // for(size_t i = 0; i < n; i+=2) {
+        //     std_struct.push_back(i);
+        // }
+        
+        m_EndTime = std::chrono::system_clock::now();
+        double std_struct_time = std::chrono::duration_cast<std::chrono::milliseconds>(m_EndTime - m_StartTime).count();
+        // bag.for_each(print); 
+        printf("%d std_struct time: %f\n", n, std_struct_time);
+        std_struct.clear(); 
+    }
     #endif
 #endif
 }

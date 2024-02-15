@@ -23,7 +23,7 @@ class Bag {
 
     public:
         Bag() {
-            map = (value_type*)mmap(NULL, mlen, mprot, mflags, -1, 0);
+            map = (value_type*)mmap(NULL, mlen * sizeof(value_type), mprot, mflags, -1, 0);
             if (map == MAP_FAILED) {
                 handle_error("mmap");
             }
@@ -31,7 +31,7 @@ class Bag {
         }
 
         ~Bag() {
-            int check = munmap(map, mlen);
+            int check = munmap(map, mlen * sizeof(value_type));
             if(check==-1) {
                 handle_error("munmap");
             }
@@ -39,7 +39,7 @@ class Bag {
 
         //insert an item into the bag
         void insert(const value_type &item) {
-            if((msize * sizeof(value_type)) + sizeof(value_type) >= mlen) {
+            if((msize) + sizeof(value_type) >= mlen) {
                 //std::cout << "resizing" << std::endl;
                 resize();
             }
@@ -50,15 +50,22 @@ class Bag {
             // moffset += sizeof(value_type);
         }
 
+        bool find(value_type item) {
+            for(int i = 0; i < msize; i++) {
+                if(map[i] == item) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         //remove a specific item from the bag
         int remove(const value_type &item) {
             for(size_t i = 0; i < msize; i++) {
                 if(map[i] == (item)) {
-                    value_type temp = map[msize-1];
+                    ~(map[i]);
                     map[i] = map[msize-1];
-                    map[msize-1] = '\0';
                     msize--;
-                    i--;
                     return 1;
                 }
             }
@@ -71,15 +78,20 @@ class Bag {
             int numDeleted = 0;
             for(size_t i = 0; i < msize; i++) {
                 if(fn(map[i])) {
-                    value_type temp = map[msize-1];
+                    // value_type temp = map[msize-1];
+                    ~(map[i]);
                     map[i] = map[msize-1];
-                    ~map[msize-1];
                     msize--;
                     i--;
                     numDeleted++;
                 }
             }
             return numDeleted;
+        }
+
+        void pop_back() {
+            ~(map[msize-1]); 
+            msize--;
         }
 
         //retrieve all items that fit a value function
@@ -103,10 +115,9 @@ class Bag {
 
         //empty bag
         void clear() {
-            for(size_t i = 0; i < msize; i++) {
-                ~map[i];
-            }
-            madvise(map+(size_t)sysconf(_SC_PAGESIZE), mlen, MADV_DONTNEED);
+            removeif(selectAll);
+            madvise(&map + (size_t)sysconf(_SC_PAGE_SIZE), mlen*sizeof(value_type) - (size_t)sysconf(_SC_PAGE_SIZE), MADV_DONTNEED);
+            munmap(&map + (size_t)sysconf(_SC_PAGE_SIZE), mlen*sizeof(value_type) - (size_t)sysconf(_SC_PAGE_SIZE));
             mlen = (size_t)sysconf(_SC_PAGESIZE);
             msize = 0;
         }
@@ -120,7 +131,7 @@ class Bag {
 
         //resize bag to allow for more items (i think for now just gonna double it every time)
         void resize() {
-            map = (value_type*)mremap(map, mlen, mlen*2, mremap_flags);
+            map = (value_type*)mremap(map, mlen*sizeof(value_type), mlen*2*sizeof(value_type), mremap_flags);
             mlen *= 2;
             //std::cout << "new mlen: " << mlen << std::endl;
             if (map == MAP_FAILED) {
@@ -145,10 +156,12 @@ class Bag {
     
     protected:
         value_type *map;
-        size_t mlen = (size_t)sysconf(_SC_PAGESIZE);
+        size_t mlen = (size_t)sysconf(_SC_PAGESIZE) / sizeof(value_type);
         int mprot = PROT_READ | PROT_WRITE;
         int mflags = MAP_PRIVATE | MAP_ANONYMOUS;
         int mremap_flags = MREMAP_MAYMOVE;
         int mfd = -1;
         size_t msize = 0;
+
+        static bool selectAll(value_type val) {return true;}   
 };
