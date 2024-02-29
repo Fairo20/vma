@@ -115,9 +115,11 @@ class Bag {
 
         //empty bag
         void clear() {
-            removeif(selectAll);
+            if(!std::is_trivially_destructible<value_type>::value) {
+                removeif(selectAll);
+            }
             madvise(&map + (size_t)sysconf(_SC_PAGE_SIZE), mlen*sizeof(value_type) - (size_t)sysconf(_SC_PAGE_SIZE), MADV_DONTNEED);
-            munmap(&map + (size_t)sysconf(_SC_PAGE_SIZE), mlen*sizeof(value_type) - (size_t)sysconf(_SC_PAGE_SIZE));
+            // munmap(&map + (size_t)sysconf(_SC_PAGE_SIZE), mlen*sizeof(value_type) - (size_t)sysconf(_SC_PAGE_SIZE));
             mlen = (size_t)sysconf(_SC_PAGESIZE);
             msize = 0;
         }

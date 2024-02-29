@@ -2,23 +2,26 @@
 #include "test_structs/vec_bag.hpp"
 #include "test_structs/index_set.hpp"
 #include "vma_structs/index_set_2.hpp"
+
+
 #include <iostream>
 #include <chrono>
 #include <random>
 
+
 // size_t n = 1000000000;
 std::vector<size_t> nvals = {10000000, 100000000, 1000000000};
 
-#define bag
+// #define bag
 // #define index_set_test
 // #define index_set_test_vma
-// #define index_set_benchmark
+#define index_set_benchmark
 
 #ifdef bag
     #define std_test
     #define vma_test
-    // #define benchmark
-    #define benchmark_loop
+    #define benchmark
+    // #define benchmark_loop
 #endif
 
 #ifdef index_set_benchmark
@@ -90,6 +93,14 @@ srand(1);
     // std_struct.insert(5+8192);
     // std_struct.insert(5+16384);
     // std_struct.insert(5+32768);
+    const char temp[19] = "temp value to hash";
+    // const uint64_t key[4] = {1, 2, 3, 4};
+    // auto hsh = HighwayHash64(key, temp, sizeof(temp));
+    // HH_ALIGNAS(32) const HHKey key = {1, 2, 3, 4};
+    // char in[8] = {1};
+    // HHResult64 result;  // or HHResult128 or HHResult256
+    // InstructionSets::Run<HighwayHash>(key, temp, sizeof(temp), &result);
+    // std::cout << result << std::endl;
     for(size_t i = 0; i < 7; i++) {
         std_struct.insert(i*16);
     }
@@ -130,15 +141,18 @@ srand(1);
     //begin bag time
 #ifdef benchmark
     std::vector<size_t> temp;
-    int n = 2;
+    int n = 0;
     for(size_t i = 0; i < nvals.at(n); i++) {
         temp.push_back(i);
+        // if(i%100000 == 0) {
+        //     std::cout << i << std::endl;
+        // }
     }
     std::chrono::time_point<std::chrono::system_clock> m_StartTime;
     std::chrono::time_point<std::chrono::system_clock> m_EndTime;
     #ifdef vma_test
-    m_StartTime = std::chrono::system_clock::now();
     std::string output;
+    m_StartTime = std::chrono::system_clock::now();
     for(size_t i = 0; i < nvals.at(n); i++) {
         vma_struct.insert(temp[i]);
         // printf("iteration %d: %f\n", i, temp[i]);
@@ -151,9 +165,7 @@ srand(1);
     //         printf("issue found: %d not inserted\n", temp[i]);
     //     }
     // }
-    // for(size_t i = 0; i < vma_struct.get_num_levels(); i++) {
-    //     printf("residency rate of level %d: %d / %d\n", i, vma_struct.res_vec.at(i), vma_struct.res_vec_2.at(i));
-    // }
+    
     // printf("residency rate: %d\n", vma_struct.residency_rate());
     // vma_struct.removeif(isEven);
     // for(size_t i = 0; i < n; i+=2) {
@@ -162,14 +174,19 @@ srand(1);
     // printf("found vals after delete: %d\n", vma_struct.find(100001));
     // vma_struct.clear();
     m_EndTime = std::chrono::system_clock::now();
+    vma_struct.printLevelInfo();
+    // for(size_t i = 0; i < vma_struct.get_num_levels(); i++) {
+    //     // printf("residency rate of level %d: %d / %d = %d\n", i, vma_struct.res_vec.at(i), vma_struct.res_vec_2.at(i), (double)vma_struct.res_vec.at(i) / (double)vma_struct.res_vec_2.at(i));
+    //     std::cout << "residency rate of level " << i << ": " << vma_struct.res_vec.at(i) << " / " << vma_struct.res_vec_2.at(i) << " = " << (double)vma_struct.res_vec.at(i) / (double)vma_struct.res_vec_2.at(i) << std::endl;
+    // }
     double vma_struct_time = std::chrono::duration_cast<std::chrono::milliseconds>(m_EndTime - m_StartTime).count();
     printf("vma_struct time: %f\n", vma_struct_time);
     #endif
     #ifdef std_test
     m_StartTime = std::chrono::system_clock::now();
     for(size_t i = 0; i < nvals.at(n); i++) {
-        // std_struct.insert(temp[i]);
-        std_struct.push_back(temp[i]);
+        std_struct.insert(temp[i]);
+        // std_struct.push_back(temp[i]);
     }
     // for(size_t i = 0; i < n; i++) {
     //     if(!(std_struct.find(temp[i]))) {
@@ -187,8 +204,8 @@ srand(1);
     double std_struct_time = std::chrono::duration_cast<std::chrono::milliseconds>(m_EndTime - m_StartTime).count();
     // bag.for_each(print); 
     printf("std_struct time: %f\n", std_struct_time);
-    std_struct.clear();
-    vma_struct.clear();
+    // std_struct.clear();
+    // vma_struct.clear();
     #endif
     #endif
 
