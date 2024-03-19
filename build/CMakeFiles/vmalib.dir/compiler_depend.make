@@ -19,6 +19,7 @@ CMakeFiles/vmalib.dir/src/main.cpp.o: /home/crnicholls20/Documents/research/vma/
   /usr/include/asm/posix_types.h \
   /usr/include/asm/posix_types_64.h \
   /usr/include/asm/types.h \
+  /usr/include/assert.h \
   /usr/include/bits/atomic_wide_counter.h \
   /usr/include/bits/byteswap.h \
   /usr/include/bits/confname.h \
@@ -196,10 +197,12 @@ CMakeFiles/vmalib.dir/src/main.cpp.o: /home/crnicholls20/Documents/research/vma/
   /usr/include/c++/13/bits/uniform_int_dist.h \
   /usr/include/c++/13/bits/unique_ptr.h \
   /usr/include/c++/13/bits/unordered_map.h \
+  /usr/include/c++/13/bits/unordered_set.h \
   /usr/include/c++/13/bits/uses_allocator.h \
   /usr/include/c++/13/bits/uses_allocator_args.h \
   /usr/include/c++/13/bits/utility.h \
   /usr/include/c++/13/bits/vector.tcc \
+  /usr/include/c++/13/cassert \
   /usr/include/c++/13/cctype \
   /usr/include/c++/13/cerrno \
   /usr/include/c++/13/chrono \
@@ -264,6 +267,7 @@ CMakeFiles/vmalib.dir/src/main.cpp.o: /home/crnicholls20/Documents/research/vma/
   /usr/include/c++/13/type_traits \
   /usr/include/c++/13/typeinfo \
   /usr/include/c++/13/unordered_map \
+  /usr/include/c++/13/unordered_set \
   /usr/include/c++/13/vector \
   /usr/include/c++/13/x86_64-redhat-linux/bits/atomic_word.h \
   /usr/include/c++/13/x86_64-redhat-linux/bits/c++allocator.h \
@@ -373,13 +377,13 @@ CMakeFiles/vmalib.dir/src/main.cpp.o: /home/crnicholls20/Documents/research/vma/
 
 /usr/include/c++/13/x86_64-redhat-linux/bits/c++locale.h:
 
-/usr/include/c++/13/x86_64-redhat-linux/bits/c++config.h:
-
 /usr/include/c++/13/x86_64-redhat-linux/bits/c++allocator.h:
 
 /usr/include/c++/13/x86_64-redhat-linux/bits/atomic_word.h:
 
 /usr/include/c++/13/vector:
+
+/usr/include/c++/13/unordered_set:
 
 /usr/include/c++/13/x86_64-redhat-linux/bits/gthr-default.h:
 
@@ -388,6 +392,12 @@ CMakeFiles/vmalib.dir/src/main.cpp.o: /home/crnicholls20/Documents/research/vma/
 /usr/include/c++/13/tr1/special_function_util.h:
 
 /usr/include/c++/13/tr1/riemann_zeta.tcc:
+
+/usr/include/c++/13/tr1/poly_laguerre.tcc:
+
+/usr/include/c++/13/tr1/poly_hermite.tcc:
+
+/usr/include/c++/13/tr1/modified_bessel_func.tcc:
 
 /usr/include/c++/13/bits/basic_ios.tcc:
 
@@ -407,10 +417,6 @@ CMakeFiles/vmalib.dir/src/main.cpp.o: /home/crnicholls20/Documents/research/vma/
 
 /usr/include/bits/select.h:
 
-/usr/include/c++/13/backward/auto_ptr.h:
-
-/usr/include/bits/types/__sigset_t.h:
-
 /usr/include/c++/13/bits/streambuf_iterator.h:
 
 /usr/include/c++/13/ostream:
@@ -424,12 +430,6 @@ CMakeFiles/vmalib.dir/src/main.cpp.o: /home/crnicholls20/Documents/research/vma/
 /usr/include/bits/types/wint_t.h:
 
 /usr/include/c++/13/ratio:
-
-/usr/include/c++/13/bits/charconv.h:
-
-/usr/include/c++/13/bits/stl_pair.h:
-
-/usr/include/c++/13/cstdio:
 
 /usr/include/bits/mman.h:
 
@@ -471,8 +471,6 @@ CMakeFiles/vmalib.dir/src/main.cpp.o: /home/crnicholls20/Documents/research/vma/
 
 /usr/include/bits/struct_stat.h:
 
-/usr/include/c++/13/tr1/poly_hermite.tcc:
-
 /usr/include/c++/13/bits/hashtable_policy.h:
 
 /usr/include/bits/stdlib-bsearch.h:
@@ -482,12 +480,6 @@ CMakeFiles/vmalib.dir/src/main.cpp.o: /home/crnicholls20/Documents/research/vma/
 /usr/include/c++/13/bits/locale_facets.tcc:
 
 /usr/include/c++/13/bits/requires_hosted.h:
-
-/usr/include/bits/floatn-common.h:
-
-/usr/include/wchar.h:
-
-/usr/include/c++/13/bits/shared_ptr_base.h:
 
 /usr/include/bits/fcntl.h:
 
@@ -542,6 +534,20 @@ CMakeFiles/vmalib.dir/src/main.cpp.o: /home/crnicholls20/Documents/research/vma/
 /usr/include/bits/byteswap.h:
 
 /usr/include/c++/13/string:
+
+/usr/include/c++/13/backward/auto_ptr.h:
+
+/usr/include/bits/types/__sigset_t.h:
+
+/usr/include/c++/13/x86_64-redhat-linux/bits/c++config.h:
+
+/usr/include/assert.h:
+
+/usr/include/bits/stat.h:
+
+/usr/include/bits/statx.h:
+
+/usr/include/asm-generic/int-ll64.h:
 
 /usr/include/c++/13/tr1/legendre_function.tcc:
 
@@ -618,6 +624,12 @@ CMakeFiles/vmalib.dir/src/main.cpp.o: /home/crnicholls20/Documents/research/vma/
 /home/crnicholls20/Documents/research/vma/src/test_structs/index_set.hpp:
 
 /usr/include/c++/13/bits/ios_base.h:
+
+/usr/include/bits/floatn-common.h:
+
+/usr/include/wchar.h:
+
+/usr/include/c++/13/bits/shared_ptr_base.h:
 
 /usr/include/c++/13/pstl/glue_numeric_defs.h:
 
@@ -697,12 +709,6 @@ CMakeFiles/vmalib.dir/src/main.cpp.o: /home/crnicholls20/Documents/research/vma/
 
 /usr/include/c++/13/bits/basic_string.h:
 
-/usr/include/c++/13/tr1/poly_laguerre.tcc:
-
-/usr/include/asm-generic/int-ll64.h:
-
-/usr/include/bits/statx.h:
-
 /usr/include/bits/pthreadtypes.h:
 
 /usr/include/bits/types/cookie_io_functions_t.h:
@@ -727,11 +733,17 @@ CMakeFiles/vmalib.dir/src/main.cpp.o: /home/crnicholls20/Documents/research/vma/
 
 /usr/include/c++/13/limits:
 
-/usr/include/bits/stat.h:
+/usr/include/c++/13/bits/charconv.h:
+
+/usr/include/c++/13/bits/stl_pair.h:
+
+/usr/include/c++/13/cstdio:
 
 /usr/include/bits/flt-eval-method.h:
 
 /usr/include/c++/13/bits/chrono.h:
+
+/usr/include/c++/13/cassert:
 
 /usr/include/c++/13/bits/cpp_type_traits.h:
 
@@ -871,6 +883,8 @@ CMakeFiles/vmalib.dir/src/main.cpp.o: /home/crnicholls20/Documents/research/vma/
 
 /usr/include/c++/13/bits/uniform_int_dist.h:
 
+/usr/include/c++/13/bits/unordered_set.h:
+
 /usr/include/c++/13/chrono:
 
 /usr/include/c++/13/cmath:
@@ -907,9 +921,9 @@ CMakeFiles/vmalib.dir/src/main.cpp.o: /home/crnicholls20/Documents/research/vma/
 
 /usr/include/c++/13/ext/type_traits.h:
 
-/usr/include/c++/13/tr1/bessel_function.tcc:
-
 /home/crnicholls20/Documents/research/vma/src/test_structs/vec_bag.hpp:
+
+/usr/include/c++/13/tr1/bessel_function.tcc:
 
 /usr/include/c++/13/initializer_list:
 
@@ -942,5 +956,3 @@ CMakeFiles/vmalib.dir/src/main.cpp.o: /home/crnicholls20/Documents/research/vma/
 /usr/include/c++/13/bits/range_access.h:
 
 /usr/include/c++/13/tr1/hypergeometric.tcc:
-
-/usr/include/c++/13/tr1/modified_bessel_func.tcc:
