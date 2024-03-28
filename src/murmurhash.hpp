@@ -10,7 +10,7 @@
 // domain. The author hereby disclaims copyright to this source code.
 //-----------------------------------------------------------------------------
 
-namespace mmhdtl {
+namespace mmh {
 //-----------------------------------------------------------------------------
 // Block read - on little-endian machines this is a single load,
 // while on big-endian or unknown machines the byte accesses should
@@ -26,7 +26,7 @@ static inline uint64_t murmurhash_getblock(const uint64_t *p) {
 #endif
 }
 
-}  // namespace mmhdtl
+
 
 /// \brief MurmurHash2 64-bit hash for 64-bit platforms.
 /// \param key The key to hash.
@@ -44,7 +44,7 @@ inline uint64_t murmur_hash_64a(const void *key, int len,
   const uint64_t *end = data + (len / 8);
 
   while (data != end) {
-    uint64_t k = mmhdtl::murmurhash_getblock(data++);
+    uint64_t k = mmh::murmurhash_getblock(data++);
 
     k *= m;
     k ^= k >> r;
@@ -122,4 +122,5 @@ struct str_hash {
     }
   }
 };
+}  // namespace mmhdtl
 #endif

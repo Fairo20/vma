@@ -2,20 +2,87 @@
 #include "test_structs/vec_bag.hpp"
 #include "test_structs/index_set.hpp"
 #include "vma_structs/index_set_2.hpp"
+#include "murmurhash.hpp"
 
 
 #include <iostream>
 #include <chrono>
 #include <random>
+#include <unordered_set>
+#include <map>
+#include <set>
+#include <vector>
+#include <string>
+
+#include <sys/stat.h>
+
+#include <sys/mman.h>
+
+#include <sys/types.h>
+
+#include <cassert>
+
+#include <unistd.h>
+
+#include <sys/mman.h>
 
 
 // size_t n = 1000000000;
-std::vector<size_t> nvals = {10000000, 100000000, 1000000000};
+std::vector<size_t> nvals = {101, 65536, 1048576, 16777216, 67108864, 100000000};
+
+//test
+bool isEven(size_t num) {return num%2==0 ? true : false;}
+
+bool isOne(size_t num) {return num == 1 ? true : false;}
+
+void increment(size_t &num) {num++;}
+
+void print(size_t item) {
+            // printf("%f\n",std::to_string(item));
+            std::cout << item << std::endl;
+        }
+void count_incore(void* pdata, size_t len) {
+    unsigned char result[len/4096];
+    mincore(pdata, len, result);
+    size_t count_incore(0);
+    for(size_t i = 0; i<len/4096; ++i) {
+      if(result[i] & 1) {
+        count_incore++;
+      }
+    }
+    std::cout << count_incore << std::endl;
+}
+
+template <typename T>
+
+class Naive_Index_Set {
+
+public:
+  //TODO add a free list of IDs
+  size_t insert(const T& value) {
+    auto [itr, flag] = m_key_id.insert({value, m_vec_iterators.size()});
+    if(flag) {
+      m_vec_iterators.push_back(itr);
+      return m_vec_iterators.size() - 1;
+    }
+    return itr->second;
+  }
+  size_t size() const { return m_vec_iterators.size(); }
+  void clear() {m_key_id.clear(); m_vec_iterators.clear(); }
+  const T& lookup(size_t idx) const { return m_vec_iterators[idx]->first; }
+private:
+  std::map<T, size_t> m_key_id;
+  std::vector<typename std::map<T, size_t>::iterator> m_vec_iterators;
+};
+
+int main(int argc, char* argv[]) {
+srand(1);
 
 // #define bag
 // #define index_set_test
 // #define index_set_test_vma
 #define index_set_benchmark
+// #define mremap_test
 
 #ifdef bag
     #define std_test
@@ -26,8 +93,25 @@ std::vector<size_t> nvals = {10000000, 100000000, 1000000000};
 
 #ifdef index_set_benchmark
     #define benchmark
+    #define delete_test
+    size_t delete_window = 100;
+    // #define uset
     #define index_set
+    char data = argv[3][0];
     #define index_set_vma
+    #define n_index_set
+    // if(argv[3][0] == 's') {
+    //     #define sorted
+    //     std::cout << "sorted" << std::endl;
+    // }
+    // else if(argv[3][0] == 'r') {
+    //     #define random
+    //     std::cout << "random" << std::endl;
+    // }
+    // else if(argv[3][0] == 'd') {
+    //     #define half_duplicates
+    //     std::cout << "duplicates" << std::endl;
+    // }
 #endif
 
 #ifdef index_set_test
@@ -40,26 +124,28 @@ std::vector<size_t> nvals = {10000000, 100000000, 1000000000};
     #define index_set_test
 #endif
 
-//test
-bool isEven(size_t num) {return num%2==0 ? true : false;}
 
-void increment(size_t &num) {num++;}
 
-void print(size_t item) {
-            // printf("%f\n",std::to_string(item));
-            std::cout << item << std::endl;
-        }
 
-int main(size_t argc, char** argv) {
-srand(1);
 #ifdef index_set
     Index_Set_Control<size_t> std_struct;
     #define std_test
 #endif
 
 #ifdef index_set_vma
-    Index_Set<size_t> vma_struct;
+    // Index_Set<size_t> vma_struct;
+    // Index_Set<size_t>* vma_struct = new Index_Set<size_t>(std::stoi(argv[1]), std::stoi(argv[2]));
+    Index_Set<size_t> vma_struct(std::stoi(argv[1]), std::stoi(argv[2]));
+    std::cout << "level scale: " << std::stoi(argv[1]) << " init probe: " << std::stoi(argv[2]) << std::endl;
     #define vma_test
+#endif
+
+#ifdef n_index_set
+    Naive_Index_Set<size_t> naive_struct;
+#endif
+
+#ifdef uset
+    std::unordered_set<int, mmh::hash<>> std_uset;
 #endif
 
 #ifdef bag
@@ -90,7 +176,7 @@ srand(1);
     printf("finished creation\n");
     // std_struct.insert(5);
     // std_struct.insert(5+4096);
-    // std_struct.insert(5+8192);
+    // std_struct.insert(5+8192);   
     // std_struct.insert(5+16384);
     // std_struct.insert(5+32768);
     const char temp[19] = "temp value to hash";
@@ -141,13 +227,26 @@ srand(1);
     //begin bag time
 #ifdef benchmark
     std::vector<size_t> temp;
-    int n = 0;
-    for(size_t i = 0; i < nvals.at(n); i++) {
-        temp.push_back(i);
+    int n = std::stoi(argv[4]);
+    for(size_t i = 1; i <= nvals.at(n); i++) {
+        if(data == 's')
+            temp.push_back(i);
+        if(data == 'r')
+            temp.push_back(rand());
+        if(data == 'd') {
+            if(i == (nvals.at(n)/2)) {
+                for(size_t i = 1; i < nvals.at(n)/2; i++) {
+                    temp.push_back(i);
+                }
+                break;
+            }
+            temp.push_back(i);
+        }
         // if(i%100000 == 0) {
         //     std::cout << i << std::endl;
         // }
     }
+
     std::chrono::time_point<std::chrono::system_clock> m_StartTime;
     std::chrono::time_point<std::chrono::system_clock> m_EndTime;
     #ifdef vma_test
@@ -158,23 +257,47 @@ srand(1);
         // printf("iteration %d: %f\n", i, temp[i]);
         // vma_struct.for_each(print);
         // std::cin >> output;
+        // std::cout << i << std::endl;
+        #ifdef delete_test
+        if(i > delete_window) {
+            // vma_struct.remove_index(i-delete_window);
+            vma_struct.remove(temp[i-delete_window]);
+        }
+        // std::cout << i << " and removing " << i - delete_window << std::endl;
+        #endif
     }
     // std::cout << sbrk(0) << std::endl;
-    // for(size_t i = 0; i < n; i++) {
-    //     if(!(vma_struct.find(temp[i]))) {
-    //         printf("issue found: %d not inserted\n", temp[i]);
-    //     }
-    // }
+    
     
     // printf("residency rate: %d\n", vma_struct.residency_rate());
     // vma_struct.removeif(isEven);
+    // vma_struct.removeif(isOne);
+    // if(vma_struct.find(1)) {
+    //     std::cout << "there's an issue with this " << std::endl;
+    // }
     // for(size_t i = 0; i < n; i+=2) {
     //     vma_struct.insert(i);
     // }
     // printf("found vals after delete: %d\n", vma_struct.find(100001));
     // vma_struct.clear();
     m_EndTime = std::chrono::system_clock::now();
-    vma_struct.printLevelInfo();
+    // vma_struct.count_incore();int
+    std::vector<size_t>::const_iterator first = temp.end() - delete_window;
+    std::vector<size_t>::const_iterator last = temp.end();
+    std::vector<size_t> delete_temp(first,last);
+    #ifdef delete_test
+    vma_struct.correctnessCheck(delete_temp);
+    #else
+    vma_struct.correctnessCheck(temp);
+    #endif
+    // vma_struct.printLevelInfo();
+    vma_struct.clear();
+    // for(size_t i = 0; i < n; i++) {
+    //     if(!(vma_struct.find(temp[i]))) {
+    //         printf("issue found: %d not inserted\n", temp[i]);
+    //     }
+    // }
+    // std::cout << vma_struct.get_global_max() << std::endl;
     // for(size_t i = 0; i < vma_struct.get_num_levels(); i++) {
     //     // printf("residency rate of level %d: %d / %d = %d\n", i, vma_struct.res_vec.at(i), vma_struct.res_vec_2.at(i), (double)vma_struct.res_vec.at(i) / (double)vma_struct.res_vec_2.at(i));
     //     std::cout << "residency rate of level " << i << ": " << vma_struct.res_vec.at(i) << " / " << vma_struct.res_vec_2.at(i) << " = " << (double)vma_struct.res_vec.at(i) / (double)vma_struct.res_vec_2.at(i) << std::endl;
@@ -186,7 +309,11 @@ srand(1);
     m_StartTime = std::chrono::system_clock::now();
     for(size_t i = 0; i < nvals.at(n); i++) {
         std_struct.insert(temp[i]);
-        // std_struct.push_back(temp[i]);
+        #ifdef delete_test
+        if(i > delete_window) {
+            std_struct.remove(temp[i-delete_window]);
+        }
+        #endif
     }
     // for(size_t i = 0; i < n; i++) {
     //     if(!(std_struct.find(temp[i]))) {
@@ -201,12 +328,46 @@ srand(1);
     // }
     // std_struct.clear();
     m_EndTime = std::chrono::system_clock::now();
+
+    #ifdef delete_test
+    std_struct.correctnessCheck(delete_temp);
+    #else
+    std_struct.correctnessCheck(temp);
+    #endif
+    // std_struct.count_incore();
+    std_struct.clear();
+    // std::cout << std_struct.get_global_max() << std::endl;
     double std_struct_time = std::chrono::duration_cast<std::chrono::milliseconds>(m_EndTime - m_StartTime).count();
     // bag.for_each(print); 
     printf("std_struct time: %f\n", std_struct_time);
+    #endif
+    #ifdef uset
+    m_StartTime = std::chrono::system_clock::now();
+    auto it = std_uset.begin();
+    for(size_t i = 0; i < nvals.at(n); i++) {
+        std_uset.insert(temp[i]);
+        #ifdef delete_test
+        if(i > delete_window) {
+            std_uset.erase(it);
+            it++;
+        }
+        #endif
+    }
+    m_EndTime = std::chrono::system_clock::now();
+    double std_uset_time = std::chrono::duration_cast<std::chrono::milliseconds>(m_EndTime - m_StartTime).count();
+    printf("unordered set time: %f\n", std_uset_time);
+    #endif
+    #ifdef n_index_set
+    m_StartTime = std::chrono::system_clock::now();
+    for(size_t i = 0; i < nvals.at(n); i++) {
+        naive_struct.insert(temp[i]);
+    }
+    m_EndTime = std::chrono::system_clock::now();
+    double n_struct_time = std::chrono::duration_cast<std::chrono::milliseconds>(m_EndTime - m_StartTime).count();
+    printf("naive index set time: %f\n", n_struct_time);
+    #endif
     // std_struct.clear();
     // vma_struct.clear();
-    #endif
     #endif
 
 #ifdef benchmark_loop
@@ -216,8 +377,8 @@ srand(1);
     }
     std::chrono::time_point<std::chrono::system_clock> m_StartTime;
     std::chrono::time_point<std::chrono::system_clock> m_EndTime;
+    #ifdef vma_test
     for(size_t n : nvals) {
-        #ifdef vma_test
         m_StartTime = std::chrono::system_clock::now();
         std::string output;
         for(size_t i = 0; i < n; i++) {
@@ -275,4 +436,21 @@ srand(1);
     }
     #endif
 #endif
+#ifdef mremap_test
+void *pdata = mmap(0, 1024*1024,
+                             PROT_READ | PROT_WRITE,
+                             MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+    assert(pdata);
+    count_incore(pdata, 1024*1024);
+    int* pi = (int*)pdata;
+    // *pi = 1;
+    for(int i = 0; i < 1024*1024/sizeof(int); i++) {
+        pi[i] = i;
+    }
+    count_incore(pdata, 1024*1024);
+    pdata = mremap(pdata, 1024*1024, 2*1024*1024, MREMAP_MAYMOVE);
+    assert(pdata);
+    count_incore(pdata, 2*1024*1024);
+#endif
+return 0;
 }

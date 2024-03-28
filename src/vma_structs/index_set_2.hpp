@@ -24,270 +24,192 @@ template <typename Item, typename Alloc = std::allocator<Item>, typename Hash = 
 class Index_Set {
     using self_type  = Bag<Item, Alloc>;
     using value_type = Item;
-    const uint64_t key[4] = {1, 2, 3, 4};
-    // return HighwayHash64(key, bytes, size);
 
     public:
-        // std::vector<int> res_vec;
-        // std::vector<int> res_vec_2;
-        
-
-        Index_Set(){
-            mset = (value_type*)mmap(NULL, capacity*sizeof(value_type), mprot, mflags, -1, 0);
+        Index_Set(int level_scale = 4, int init_probe = 2) : level_scale(level_scale), init_probe(init_probe) {
+            std::cout << "2 level scale: " << level_scale << " init probe: " << init_probe << std::endl;
+            mset = (value_type*)mmap(NULL, capacity*sizeof(value_type), mprot, mflags, 0, 0);
             if (mset == MAP_FAILED) {
                 handle_error("mmap");   
             }
-            printf("made mset\n");
+            // printf("made mset\n");
             fflush(stdout);
             tombstones = (int*)mmap(NULL, capacity*sizeof(int), mprot, mflags, -1, 0);
-            printf("made tombstones\n");
+            // printf("made tombstones\n");
             fflush(stdout);
             for(int i = 0; i < capacity; i++) {
                 tombstones[i] = 0;
             }
-            // res_vec.push_back(0);
-            // res_vec_2.push_back(capacity);
-        };
+        }
+
         ~Index_Set(){
             munmap(mset, capacity);
             munmap(tombstones, capacity);
-        };
+        }
 
         void insert(value_type val) {
             int curr_probe = init_probe;
-            int curr_cap = init_cap;
+            uint64_t curr_cap = init_cap;
             int curr_level = 0;
-            // const char* val_map = std::to_string(val).c_str();
-            // auto hsh = HighwayHash64(key, val_map, sizeof(val_map));
-            auto hsh = murmur_hash_64a(&val, sizeof(val), 0xa9377665cb32);
-            // auto hsh = val;
-            // auto hsh = std::hash<value_type>{}(val);
-            // std::cout << hsh << std::endl;
-            unsigned int i = hsh%curr_cap;
-            int offset = 0;
-            int insert_index = -1;
+            auto hsh = mmh::hash{}(val);
+            uint64_t i = hsh%curr_cap;
+            uint64_t fingerprint = hsh >> 34;
+            if(fingerprint == 0) {
+                fingerprint++;
+            }
+            uint64_t offset = 0;
+            uint64_t insert_index;
+            bool index_found = false;
             int max_probe = 0;
             //level indexing: as levels increase
-            // printf("begin insert for val %d\n", val);
             for(curr_level; curr_level < num_levels; curr_level++) {
-                for(int j = 0; j + i < curr_cap + offset && j < curr_probe; j++) {
-                    // printf("i: %d, j: %d, curr_probe: %d\n", i, j, curr_probe);
-                    if(tombstones[i+j] == 0) {    //if empty
-                        if(insert_index < 0) {
-                            insert_index = i+j;
-                            // printf("insert empty %d at %d\n", val, i+j);
+                uint64_t temp = curr_cap + offset;
+                unsigned int j = 0;
+                uint64_t ij = i+j;
+                for(; ij < temp && j < curr_probe; j++,ij++) {
+                    global_probe_max++;
+                    if(tombstones[ij] == 0) {    //if empty
+                        if(!index_found) {
+                            insert_index = ij;
+                            index_found = true;
                         }
-                        else {
-                            // printf("probed at %d and found end, exiting\n", i+j);
-                        }
-                        // i = capacity;
                         break;
                     }
-                    else if(tombstones[i+j] == 1) {   //if tombstone
-                        if(insert_index < 0) {
-                            insert_index = i+j;
-                            // max_probe++;
-                            // printf("found tombstone at %d, begin probing\n", i+j);
+                    else if(tombstones[ij] == -1) {   //if tombstone
+                        if(!index_found) {
+                            insert_index = ij;
+                            index_found = true;
                         }
-                        // else {
-                        //     max_probe++;
-                        //     // printf("probed at %d and not found, continuing\n", i+j);
-                        // }
                     }
                     else {                      //if filled
-                        if(mset[i+j] == val) {        //if value already exists in set
-                            // i = capacity;
-                            insert_index = -1;
-                            break;
+                        if(tombstones[ij] == fingerprint) {  //if fingerprint similar
+                            if(mset[ij] == val) {           //if value already exists in set
+                                index_found = false;
+                                break;
+                            }
                         }
-                        // else if (insert_index < 0){
-                        //     max_probe++;
-                        //     // printf("searching at %d and filled, continuing\n", i+j);
-                        // }
-                        // else {
-                        //     max_probe++;
-                        //     // printf("probed at %d and not found, continuing\n", i+j);
-                        // }
                     }
                     if(j + 1 >= curr_probe && curr_level + 1 >= num_levels) {       //resize if on last level and hit max probe
-                        // printf("hit max probe and last level\n");
-                        if(insert_index < 0) {
+                        if(!index_found) {
                             resize(curr_cap);
-                            // res_vec.push_back(0);
-                            // res_vec_2.push_back(curr_cap*2);
                         }
                         continue;
                     }
-                    // printf("vals at end of level loop: i=%d, curr_cap=%d, curr_probe=%d, curr_level=%d\n", i, curr_cap, curr_probe, curr_level);
                 }
-                offset += curr_cap;
-                curr_cap*=level_scale;
-                // printf("hash before: %d\n", hsh);
-                hsh = rotr64(hsh, 4);
-                // printf("hash after: %d\n", hsh);
-                i = hsh%curr_cap + offset;
-                // curr_probe++;
-                // printf("exited j loop, new vals: offset = %d, curr_cap = %d, i = %d, curr_probe = %d\n", offset, curr_cap, i, curr_probe);
+                if(!index_found) {
+                    offset += curr_cap;
+                    curr_cap*=level_scale;
+                    hsh = rotr64(hsh, 4);
+                    fingerprint = hsh >> 34;
+                    if(fingerprint == 0) {
+                        fingerprint++;
+                    }
+                    i = (hsh & (curr_cap - 1)) + offset;
+                }
             }   
-            // printf("exited i loop\n");
-            if(insert_index >= 0) {
-                // res_vec.at(curr_level-1) = res_vec.at(curr_level-1) + 1;
+            if(index_found) {
+                // std::cout << insert_index << " | " << capacity << std::endl << std::flush;
                 mset[insert_index] = val;
-                tombstones[insert_index] = 2; //replace with fingerprint
-                // printf("max probe for val %d: %d\n", val, max_probe);
+                tombstones[insert_index] = fingerprint; 
                 size++;
             }
         }
 
-        void insert2(value_type val) {
-            int curr_probe = init_probe;
-            int curr_cap = init_cap;
-            auto hsh = murmur_hash_64a(val, sizeof(val), 0xa9377665cb32);
-            int start = 0;
-            int cpd = 0;
-            for(int i = hsh%curr_cap; i - start < curr_cap; i++) {
-                // printf("i: %d val: %d: num_loops: %d\n", i, val, insertLoops);   
-                if(tombstones[i] == 0) {
-                    mset[i] = val;
-                    tombstones[i] = 2; //replace with fingerprint
-                    size++;
-                    insertLoops++;
-                    break;
-                }
-                else if(tombstones[i] == 1) {
-                    for(int j = i; j < curr_cap; j++) {
-                        if(tombstones[j] == 0) {
-                            mset[i] = val;
-                            tombstones[i] = 2; //replace with fingerprint
-                            size++;
-                            break;
-                        }
-                        if(mset[j] == val) {
-                            break;
-                        }
-                        if(j == curr_probe) {
-                            if(start + curr_cap >= capacity) {
-                                mset[i] = val;
-                                tombstones[i] = 2; //replace with fingerprint
-                                size++;
-                                break;
-                            }
-                            start += curr_cap;
-                            curr_probe *= 2;
-                            curr_cap *=2;
-                            i = hsh%curr_cap + start;
-                        }
-                    }
-                }
-                else {          //if filled
-                    if(mset[i] == val) {
-                        insertLoops++;
-                        break;
-                    }
-                    if(cpd >= curr_probe) {
-                        if(start + curr_cap >= capacity) {
-                            resize(curr_cap);
-                            printf("old probe distance: %d new probe distance: %d\n", curr_probe, curr_probe*2);
-                            // printf("old - start: %d cp: %d cc: %d i: %d\nnew - start: %d cp: %d cc: %d i: %d\nnum_loops: %d val: %d\n", start, curr_probe, curr_cap, i, start + curr_cap, curr_probe*2, curr_cap*2, hsh%(curr_cap*2), insertLoops, val);
-                        }
-                        start += curr_cap;
-                        curr_probe *= 2; 
-                        // size++;
-                        curr_cap *= 2;
-                        i = hsh%curr_cap + start;
-                    }
-                }
-                cpd++;
-                insertLoops++;
-            }
-        };
-
         bool find(value_type val) {
             int curr_probe = init_probe;
             int curr_cap = init_cap;
-            auto hsh = murmur_hash_64a(val, sizeof(val), 0xa9377665cb32);
-            int start = 0;
-            for(int i = hsh%curr_cap; i < curr_cap; i++) {
-                if(tombstones[i] == 0) {
-                    return false;
-                }
-                else if(tombstones[i] == 1) {
-                    for(int j = i; j < curr_cap; j++) {
-                        if(mset[j] == val) {
-                            return true;
-                        }
-                        if(j == curr_probe) {
-                            if(start + curr_cap >= capacity) {
-                                return false;
-                            }
-                            start += curr_cap;
-                            curr_probe *= 2;
-                            curr_cap *=2;
-                            i = hsh%curr_cap + start;
-                        }
-                    }
-                }
-                else {
-                    if(mset[i] == val) {
-                        return true;
-                    }
-                    if(i == curr_probe) {
-                        if(start + curr_cap >= capacity) {
-                            return false;
-                        }
-                        start += curr_cap;
-                        curr_probe *= 2;
-                        curr_cap *= 2;
-                        i = hsh%curr_cap + start;
-                    }
-                }
+            int curr_level = 0;
+            unsigned mask = (1 << 8) - 1;
+            auto hsh = mmh::hash{}(val);
+            unsigned int i = hsh%curr_cap;
+            int fingerprint = hsh >> 34;
+            if(fingerprint == 0) {
+                fingerprint++;
             }
-        };
+            int offset = 0;
+            int max_probe = 0;
+            //level indexing: as levels increase
+            for(curr_level; curr_level < num_levels; curr_level++) {
+                size_t temp = curr_cap + offset;
+                size_t j = 0;
+                size_t ij = i+j;
+                for(; ij < temp && j < curr_probe; j++,ij++) {
+                    global_probe_max++;
+                    if(tombstones[ij] == 0) {    //if empty
+                        return false;
+                    }
+                    else {                      //if filled
+                        if(tombstones[ij] == fingerprint) {  //if fingerprint similar
+                            if(mset[ij] == val) {           //if value already exists in set
+                                return true;
+                            }
+                        }
+                    }
+                }
+                offset += curr_cap;
+                curr_cap*=level_scale;
+                hsh = rotr64(hsh, 4);
+                fingerprint = hsh >> 34;
+                if(fingerprint == 0) {
+                    fingerprint++;
+                }
+                i = (hsh & (curr_cap - 1)) + offset;
+            }   
+            return false;
+        }
+
+        void remove_index(size_t index) {
+            ~mset[index];
+            tombstones[index] = -1;
+            size--;
+        }
+
         void remove(value_type val) {
             int curr_probe = init_probe;
             int curr_cap = init_cap;
-            auto hsh = murmur_hash_64a(val, sizeof(val), 0xa9377665cb32);
-            int start = 0;
-            for(int i = hsh%curr_cap; i < curr_cap; i++) {
-                if(tombstones[i] == 0) {
-                    break;
-                }
-                else if(tombstones[i] == 1) {
-                    for(int j = i; j < curr_cap; j++) {
-                        if(mset[j] == val) {
-                            ~mset[j];
-                            tombstones[j] = 1;
-                            size--;
-                        }
-                        if(j == curr_probe) {
-                            if(start + curr_cap >= capacity) {
+            int curr_level = 0;
+            unsigned mask = (1 << 8) - 1;
+            auto hsh = mmh::hash{}(val);
+            unsigned int i = hsh%curr_cap;
+            int fingerprint = hsh >> 34;
+            if(fingerprint == 0) {
+                fingerprint++;
+            }
+            int offset = 0;
+            int insert_index = -2;
+            int max_probe = 0;
+            //level indexing: as levels increase
+            for(curr_level; curr_level < num_levels; curr_level++) {
+                size_t temp = curr_cap + offset;
+                size_t j = 0;
+                size_t ij = i+j;
+                for(; ij < temp && j < curr_probe; j++,ij++) {
+                    global_probe_max++;
+                    if(tombstones[ij] == 0) {    //if empty
+                        break;
+                    }
+                    else if(tombstones[ij] > 0) {                      //if filled
+                        if(tombstones[ij] == fingerprint) {  //if fingerprint similar
+                            if(mset[ij] == val) {           //if value already exists in set
+                                ~mset[ij];
+                                tombstones[ij] = -1;
+                                size--;
                                 break;
                             }
-                            start += curr_cap;
-                            curr_probe *= 2;
-                            curr_cap *=2;
-                            i = hsh%curr_cap + start;
                         }
                     }
                 }
-                else {
-                    if(mset[i] == val) {
-                        ~mset[i];
-                        tombstones[i] = 1;
-                        size--;
-                    }
-                    if(i == curr_probe) {
-                        if(start + curr_cap >= capacity) {
-                            break;
-                        }
-                        start += curr_cap;
-                        curr_probe *= 2;
-                        curr_cap *= 2;
-                        i = hsh%curr_cap + start;
-                    }
+                offset += curr_cap;
+                curr_cap*=level_scale;
+                hsh = rotr64(hsh, 4);
+                fingerprint = hsh >> 34;
+                if(fingerprint == 0) {
+                    fingerprint++;
                 }
-            }
-        };
+                i = (hsh & (curr_cap - 1)) + offset;
+            }   
+        }
+
         void clear() {
             for(size_t i = 0; i < capacity; i++) {
                 ~mset[i];
@@ -304,23 +226,23 @@ class Index_Set {
             int temp = 0;
             int bound = size;
             for(int i = 0; i < capacity && temp < bound; i++) {
-                if(tombstones[i] > 1 && fn(mset[i])){
-                    tombstones[i] = 2;
-                    ~mset[i];
-                    size--;
-                }
-                if(tombstones[i] > 1) {
+                if(tombstones[i] > 0) {
                     temp++;
+                    if(fn(mset[i])){
+                        tombstones[i] = -1;
+                        ~mset[i];
+                        size--;
+                    }
                 }
             }
-        };
+        }
 
         template <typename Function>
         void for_each(Function fn) {
             int temp = 0;
             int bound = size;
             for(int i = 0; i < capacity && temp < bound; i++) {
-                if(tombstones[i] > 1){
+                if(tombstones[i] > 0){
                     fn(mset[i]);
                     temp++;
                 }
@@ -353,33 +275,104 @@ class Index_Set {
             for(int i = 0; i < totalCount.size(); i++) {
                 std::cout << "level " << i << ": " << totalCount.at(i) << " / " << capTrack.at(i) << " = " << (double)totalCount.at(i) / (double)capTrack.at(i) << std::endl;
             }
+            // size_t mincore_len = (capacity + sysconf(_SC_PAGESIZE) - 1) / sysconf(_SC_PAGESIZE);
+            // size_t mincore_count = 0;
+            // unsigned char *vec = (unsigned char*)malloc(mincore_len);
+            // mincore(mset, capacity, vec);
+            // for(int i = 0; i < mincore_len; i++) {
+            //     if(vec[i] == 1) {
+            //         mincore_count++;
+            //     }
+            //     else {
+            //         std::cout << i << std::endl;
+            //     }
+            // }
+            // std::cout << "mincore: " << mincore_count << " / mincore_len: " << mincore_len << " = " << mincore_count * 100/ mincore_len << "% page residency" << std::endl;
+            // free(vec);
+        }
+
+        void correctnessCheck(std::vector<value_type> vals) {
+            std::vector<value_type> missing;
+            for(value_type val : vals) {
+                if(!find(val)) {
+                    std::cout << "Cannot find " << val << " by find function" << std::endl;
+                    missing.push_back(val);
+                }
+            }
+            for(size_t i = 0; i < capacity; i++) {
+                for(value_type val : missing) {
+                    if(mset[i] == val) {
+                        auto hsh = mmh::hash{}(val);
+                        int fingerprint = hsh >> 34;
+                        if(fingerprint == 0) {
+                            fingerprint++;
+                        }
+                        std::cout << "potential tombstone issue: " << val << " | " << mset[i] << " found at " << i << " with tombstone " << tombstones[i] << " and fingerprint " <<  fingerprint << std::endl;
+                    }
+                }
+            }
+            // bool found = false;
+            // for(value_type val : vals) {
+            //     for(size_t i = 0; i < capacity; i++) {
+            //         if(val == mset[i]) {
+            //             found = true;
+            //             break;
+            //         }
+            //     }
+            //     if(!found) {
+            //         std::cout << val << " not found" << std::endl;
+            //     }
+            //     found = false;
+            // }
+            count_incore();
         }
 
         
 
         int returnLoops() {return insertLoops;}
 
-        size_t getSize() {return size;}
-        size_t getCapacity() {return capacity;}
+        uint64_t getSize() {return size;}
+        uint64_t getCapacity() {return capacity;}
 
         int residency_rate() {return size*100/capacity;}
 
         int get_num_levels() {return num_levels;}
+
+        uint64_t get_global_max() {return global_probe_max;}
+
+
+        void count_incore() {
+            size_t pagesize = sysconf(_SC_PAGE_SIZE);
+            // std::cout << capacity * sizeof(value_type) << " | " << (capacity * sizeof(value_type) + pagesize) / pagesize << std::endl << std::flush; 
+            unsigned char *result = new unsigned char[(capacity * sizeof(value_type) + pagesize) / pagesize];
+            mincore(mset, capacity * sizeof(value_type), result);
+            size_t count_incore(0);
+            for(size_t i = 0; i<(capacity * sizeof(value_type) + pagesize)/pagesize; ++i) {
+                if(result[i] & 1) {
+                    count_incore++;
+                }
+            }
+            std::cout << count_incore << " of " << capacity*sizeof(value_type)/ pagesize << std::endl;
+            delete result;
+        }
 
 
     private:
         value_type *mset;
         int *tombstones;
         // 0 is empty, 1 is tombstone, anything else is fingerprint
-        size_t capacity = (size_t)sysconf(_SC_PAGESIZE) / sizeof(value_type);
+        // size_t capacity = 1024 * (size_t)sysconf(_SC_PAGESIZE) / sizeof(value_type);
+        uint64_t capacity = 1024 * 1024;
         // size_t capacity = 16;
-        size_t size = 0; //amount of items in set
+        uint64_t size = 0; //amount of items in set
         // int init_probe = pow((int)log2(capacity),2);
         int num_levels = 1;
-        int init_probe = 4;
-        int init_cap = capacity;
-        int level_scale = 15; //user set amount to scale levels by
+        uint64_t init_cap = capacity;
+
+        int level_scale;    //user set amount to scale levels by
+        int init_probe;     //user set amount to probe levels by
         // int curr_begin = 0;
+        uint64_t global_probe_max = 0;    //work this into insert
         // int curr_probe = 4;
         int mprot = PROT_READ | PROT_WRITE;
         int mflags = MAP_PRIVATE | MAP_ANONYMOUS;
@@ -388,15 +381,34 @@ class Index_Set {
 
         int insertLoops = 0;
 
-        void resize(size_t max_level_cap){  //change all resizes to size_t
-            printf("attempting resize from %d to %d at current size %d\n", capacity, capacity+(max_level_cap*level_scale), size);
-            mset = (value_type*)mremap(mset, capacity*sizeof(value_type), capacity*sizeof(value_type)+(max_level_cap*level_scale*sizeof(value_type)), mremap_flags);
-            tombstones = (int*)mremap(tombstones, capacity*sizeof(int), capacity*sizeof(int)+(max_level_cap*level_scale*sizeof(int)), mremap_flags);
-            // for(int i = capacity; i < capacity + (max_level_cap*level_scale); i++) {
-            //     tombstones[i] = 0;
+        void resize(uint64_t max_level_cap){  //change all resizes to size_t
+            // printf("attempting resize from %d to %d at current size %d\n", capacity, capacity+(max_level_cap*level_scale), size);
+            // std::cout << "resizing from " << capacity << " to " << capacity+(max_level_cap*level_scale) << std::flush << std::endl;
+            // std::vector<value_type> temp;
+            // for(int i = 0; i < capacity; i++) {
+            //     if(tombstones[i] > 0) {
+            //         temp.push_back(mset[i]);
+            //     }
             // }
+            // munmap(mset, capacity*sizeof(value_type));
+            // mset = (value_type*)mmap(NULL, capacity*sizeof(value_type)+(max_level_cap*level_scale*sizeof(value_type)), mprot, mflags, -1, 0);
+            // count_incore();
+            mset = (value_type*)mremap(mset, capacity*sizeof(value_type), 
+                                        (capacity + max_level_cap*level_scale)*sizeof(value_type), 
+                                        mremap_flags);
+            if(mset == (void*)-1) {
+                perror("Error mremapping the file");
+                return;
+            }
+            tombstones = (int*)mremap(tombstones, capacity*sizeof(int), capacity*sizeof(int)+(max_level_cap*level_scale*sizeof(int)), mremap_flags);
             capacity += (max_level_cap*level_scale);
+            // std::cout << "new capacity = " << capacity << std::endl << std::flush;
             num_levels++;
+            // count_incore();
+            // for(value_type val : temp) {
+            //     insert(val);
+            // }
+            // printf("finished resize from %d at current size %d\n", capacity, size);
         };
 
         inline uint64_t rotr64 ( uint64_t x, int8_t r ) {

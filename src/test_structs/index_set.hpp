@@ -34,93 +34,101 @@ class Index_Set_Control {
             free(tombstones);
         }
 
-        //is this a true set that does not allow duplicates? if so need to search the entire probe distance before inserting
-        void insert2(value_type val) {
-            auto hsh = murmur_hash_64a(&val, sizeof(val), 0xa9377665cb32);
-            // printf("entered put with value %d and hash %d\n", val, hsh);
-            hashInsert(mset, tombstones, val, hsh, 0);
-        };
-
         void insert(value_type val) {
-            auto hsh = murmur_hash_64a(&val, sizeof(val), 0xa9377665cb32);
-            int insert_index = -1;
-            int i;
+            auto hsh = mmh::hash{}(val);
+            size_t insert_index;
+            bool index_found = false;
+            size_t i;
+            int probe_length = 0;
             if(size >= capacity * 3 / 4) {
-                // std::cout << "beginning resize" << std::endl;
                 resize();
             }
             i = hsh % capacity;
-            // std::cout << "inserting " << val << " with size " << size << " and cap " << capacity << std::endl << std::flush;
             while(1) {
+                probe_length++;
+                global_probe_max++;
                 if(i >= capacity) {
                     i = 0;
-                    // std::cout << "index hit cap, cycling to 0" << std::endl;
                 }
                 if(tombstones[i] == 0) {
-                    // std::cout << "empty" << std::endl;
-                    if(insert_index < 0) {
+                    if(!index_found) {
                         insert_index = i;
+                        index_found = true;
                     }
                     break;
                 }
                 else if(tombstones[i] == 1) {
-                    // std::cout << "full" << std::endl;
                     if(mset[i] == val) {
-                        std::cout << "duplicate found " << val << std::endl;
-                        insert_index = -1;
+                        // std::cout << "duplicate found " << val << std::endl;
+                        index_found = false;
                         break;
                     }
                 }
-                else if(tombstones[i] == 2) {
-                    std::cout << "tombstone i: " << i << " val: " << val << " hash: " << hsh << " residual value? " << mset[i] << std::endl;
-                    if(insert_index < 0) {
+                else if(tombstones[i] == 2) {   
+                    // std::cout << "tombstone i: " << i << " val: " << val << " hash: " << hsh << " residual value? " << mset[i] << std::endl;
+                    if(!index_found) {
                         insert_index = i;
+                        index_found = true;
                     }
                 }
                 i++;
             }
-            if(insert_index >= 0) {
-                // std::cout << "inserting val" << std::endl;
+            if(index_found) {
                 mset[insert_index] = val;
                 tombstones[insert_index] = 1;
                 size++;
+                if(probe_length > max_probe) {
+                    max_probe = probe_length;
+                }
             }
         }
 
         bool find(value_type val) {
-            auto hsh = std::hash<value_type>{}(val)%capacity;
-            for(int i = 0; i < max_probe; i++) {
-                if(tombstones[hsh] == 0) {
+            auto hsh = mmh::hash{}(val);
+            size_t i = hsh%capacity;
+            size_t ij = i;
+            for(size_t j = 0; j < max_probe; j++) {
+                if(ij >= capacity) {
+                    ij = 0;
+                }
+                if(tombstones[ij] == 0) {
+                    // if(val == 28736079) {
+                    //     std::cout << "incorrect intermediary tombstone at " << ij << std::endl;
+                    // }
                     return false;
                 }
-                else {
-                    if(mset[hsh] == val && tombstones[hsh] == 1) {
+                else if(tombstones[ij] == 1){
+                    if(mset[ij] == val) {
                         return true;
                     }
-                }
+                } 
+                ij++;
             }
             return false;
-        };
+        }
 
         //do i have to deconstrunct objects deleted or can i just leave them to be overwritten
         void remove(value_type val) {
-            // printf("begin remove for val %d\n", val);
-            auto hsh = std::hash<value_type>{}(val)%capacity;
-            for(int i = 0; i < max_probe; i++) {
-                if(tombstones[hsh + i] == 0) {
-                    // printf("val not found, returning\n");
+            auto hsh = mmh::hash{}(val);
+            size_t i = hsh % capacity;
+            size_t ij = i;
+            for(int j = 0; j < max_probe; j++) {
+                if(ij >= capacity) {
+                    ij = 0;
+                }
+                if(tombstones[ij] == 0) {
                     break;
                 }
-                else if(mset[hsh + i] == val && tombstones[hsh + i] == 1) {
-                    // printf("val %d found at %d, removed\n", val, hsh+i);
-                    tombstones[hsh + i] = 2;
-                    ~mset[hsh + i];
+                else if(mset[ij] == val && tombstones[ij] == 1) {
+                    tombstones[ij] = 2;
+                    ~mset[ij];
                     size--;
                     // printf("proof of erasure: %d | tombstone: %d\n", mset[hsh+i], tombstones[hsh+i]);
                     break;
                 }
+                ij++;
             }
-        };
+        }
         
         template <typename Function>
         void removeif(Function fn) {
@@ -162,93 +170,61 @@ class Index_Set_Control {
 
         int residency_rate() {return size*100/capacity;}
 
+        size_t get_global_max() {return global_probe_max;}
+
+        void correctnessCheck(std::vector<value_type> vals) {
+            std::vector<value_type> missing;
+            for(value_type val : vals) {
+                if(!find(val)) {
+                    std::cout << "Cannot find " << val << " by find function" << std::endl;
+                    missing.push_back(val);
+                    break;
+                }
+            }
+            for(int i = 0; i < capacity; i++) {
+                for(value_type val : missing) {
+                    if(mset[i] == val) {
+                        std::cout << "potential tombstone issue: " << val << " | " << mset[i] << " found at " << i << " with tombstone " << tombstones[i] << std::endl;
+                    }
+                }
+            }
+            // count_incore();
+        }
+
+        void count_incore() {
+            size_t pagesize = sysconf(_SC_PAGE_SIZE);
+            std::cout << capacity * sizeof(value_type) << " | " << (capacity * sizeof(value_type) + pagesize) / pagesize << std::endl << std::flush; 
+            unsigned char *result = new unsigned char[(capacity * sizeof(value_type) + pagesize) / pagesize];
+            mincore(mset, capacity * sizeof(value_type), result);
+            size_t count_incore(0);
+            for(size_t i = 0; i<(capacity * sizeof(value_type) + pagesize)/pagesize; ++i) {
+                if(result[i] & 1) {
+                    count_incore++;
+                }
+            }
+            std::cout << count_incore << " of " << capacity*sizeof(value_type)/ pagesize << std::endl;
+            delete result;
+        }
+
     private:
         value_type *mset;
         int *tombstones;
-        size_t capacity = (size_t)sysconf(_SC_PAGESIZE) / sizeof(value_type);
-        // size_t capacity = 64;
+        size_t capacity = 1024 * 1024;
         size_t size = 0;
-        int max_probe = pow((int)log2(capacity),2);
-        // int max_probe = 8;
+        int max_probe = 1;
+        size_t global_probe_max = 0;
 
         int insertLoops = 0;
 
-        int hashInsert(value_type *set, int *tombstone, value_type val, auto hsh, int curr_probe) { 
-            int insertIndex = -1;   
-            if(hsh >= capacity) {
-                hsh = 0;
-            }        
-            if(tombstones[hsh] == 0) {
-                // printf("found empty slot at %d for %d\n",hsh,val);
-                insertIndex = hsh;
-                set[hsh] = val;
-                tombstones[hsh] = 1;
-                size++;
-                if(size >= capacity * 3 / 4) {
-                    resize();
-                }
-                // printf("inserted %d at %d\n", set[hsh], hsh);
-            }
-            else if(tombstones[hsh] == 2) {
-                int i = 1;
-                // while(i + curr_probe < max_probe) {
-                //     if(tombstones[hsh + i] == 0) {
-                //         // insertLoops++;
-                //         break;
-                //     }
-                //     if(set[hsh + i] == val) {
-                //         insertLoops++;
-                //         return -1;
-                //     }
-                //     i++;
-                // }
-                // if(size >= capacity * 3 / 4) {
-                //     resize();
-                // }
-                // if()
-                insertIndex = hsh;
-                set[hsh] = val;
-                tombstones[hsh] = 1;
-            }
-            else if(tombstones[hsh] == 1) {
-                if(set[hsh] == val) {
-                    // printf("attempt to insert duplicate %d, returning\n", val);
-                    insertLoops++;
-                    return -1;
-                }
-                // if(curr_probe == max_probe) {
-                //     resize();
-                //     hashInsert(set, tombstone, val, hsh+1, curr_probe+1);
-                // }
-                else {
-                    hashInsert(set, tombstone, val, hsh+1, curr_probe+1);
-                }
-            }
-            insertLoops++;
-            return 0;
-        };
-
         void resize() {
-            printf("attempting resize from %d to %d at current size %d\n", capacity, capacity*2, size);
+            // printf("attempting resize from %d to %d at current size %d\n", capacity, capacity*2, size);
             std::vector<value_type> temp_mset;
-            // int temp = 0;
             for(int i = 0; i < capacity; i++) {
                 if(tombstones[i] == 1) {
-                    // if(std::find(temp_mset.begin(), temp_mset.end(), mset[i]) != temp_mset.end()) {
-                    //     std::cout << "FAILURE: " << mset[i] << std::endl;
-                    // }
                     temp_mset.push_back(mset[i]);
-                    // temp++;
-                    // std::cout << "index " << temp_index << std::endl;
-                    // std::cout << "inserting " << mset[i] << " into temp array" << std::endl;
                 }
             }
-            // if(temp != size) {
-            //     std::cout << "temp: " << temp << " | size: " << size << " | actual: " << capacity * 3 / 4 << std::endl;
-            // }
             clear();
-            // free(mset);
-            // free(tombstones);
             capacity *= 2;
             mset = (value_type*)realloc(mset, capacity*sizeof(value_type));
             tombstones = (int*)realloc(tombstones, capacity*sizeof(int));
@@ -257,34 +233,6 @@ class Index_Set_Control {
             }
             for(value_type val : temp_mset) {
                 insert(val);
-                // std::cout << "inserting " << temp_mset[i] << " into resized array with size " << size << std::endl;
             }
         }
-
-        void resize2() {
-            printf("attempting resize from %d to %d at current size %d\n", capacity, capacity*2, size);
-            value_type *temp_mset = (value_type*)malloc(capacity*2*sizeof(value_type));
-            int *temp_tombs = (int*)malloc(capacity*2*sizeof(int));
-            for(int i = 0; i < capacity; i++) {
-                temp_tombs[i] = 0;
-            }
-            size_t temp_size = size;
-            size_t temp = 0;
-            size = 0;
-            max_probe *= 2;
-            capacity *= 2;
-            auto hsh = murmur_hash_64a(mset[0], sizeof(mset[0]), 0xa9377665cb32);
-            for(size_t i = 0; i < capacity && temp < temp_size; i++) {
-                if(tombstones[i] == 1) {
-                    // printf("resize insert %d at %d\n",mset[i],hsh);
-                    hsh = murmur_hash_64a(mset[i], sizeof(mset[i]), 0xa9377665cb32);
-                    hashInsert(temp_mset, temp_tombs, mset[i], hsh, 0);
-                    temp++;
-                }
-            }
-            free(mset);
-            free(tombstones);
-            mset = temp_mset;
-            tombstones = temp_tombs;
-        };
 };
