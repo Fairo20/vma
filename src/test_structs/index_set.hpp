@@ -39,16 +39,21 @@ class Index_Set_Control {
             size_t insert_index;
             bool index_found = false;
             size_t i;
-            int probe_length = 0;
+            // int probe_length = 0;
             if(size >= capacity * 3 / 4) {
                 resize();
             }
             i = hsh % capacity;
+            size_t initial_probe = i;
+            size_t j = 0;
             while(1) {
-                probe_length++;
+                j++;
                 global_probe_max++;
                 if(i >= capacity) {
                     i = 0;
+                }
+                if(index_found && j > max_probe) {
+                    break;
                 }
                 if(tombstones[i] == 0) {
                     if(!index_found) {
@@ -60,8 +65,7 @@ class Index_Set_Control {
                 else if(tombstones[i] == 1) {
                     if(mset[i] == val) {
                         // std::cout << "duplicate found " << val << std::endl;
-                        index_found = false;
-                        break;
+                        return;
                     }
                 }
                 else if(tombstones[i] == 2) {   
@@ -77,9 +81,12 @@ class Index_Set_Control {
                 mset[insert_index] = val;
                 tombstones[insert_index] = 1;
                 size++;
-                if(probe_length > max_probe) {
-                    max_probe = probe_length;
-                }
+                // std::cout << size << std::endl;
+                size_t insert_probe_length = initial_probe <= insert_index ? (insert_index - initial_probe) : (capacity - initial_probe) + (insert_index);
+                max_probe = std::max(insert_probe_length, max_probe);
+            }
+            else {
+                std::cout << "An issue has occurred with insertion of value " << val << std::endl;
             }
         }
 
@@ -87,7 +94,7 @@ class Index_Set_Control {
             auto hsh = mmh::hash{}(val);
             size_t i = hsh%capacity;
             size_t ij = i;
-            for(size_t j = 0; j < max_probe; j++) {
+            for(size_t j = 0; j <= max_probe; j++) {
                 if(ij >= capacity) {
                     ij = 0;
                 }
@@ -107,27 +114,32 @@ class Index_Set_Control {
             return false;
         }
 
-        //do i have to deconstrunct objects deleted or can i just leave them to be overwritten
         void remove(value_type val) {
             auto hsh = mmh::hash{}(val);
             size_t i = hsh % capacity;
             size_t ij = i;
-            for(int j = 0; j < max_probe; j++) {
+            for(size_t j = 0; j <= max_probe; j++) {
                 if(ij >= capacity) {
                     ij = 0;
                 }
                 if(tombstones[ij] == 0) {
-                    break;
+                    // std::cout << "could not remove found empty on " <<  val << std::endl << std::flush;
+                    // erasure_count++;
+                    problem_children.push_back(val);
+                    return;
                 }
                 else if(mset[ij] == val && tombstones[ij] == 1) {
                     tombstones[ij] = 2;
                     ~mset[ij];
                     size--;
-                    // printf("proof of erasure: %d | tombstone: %d\n", mset[hsh+i], tombstones[hsh+i]);
-                    break;
+                    // printf("proof of erasure: %d | tombstone: %d\n", mset[ij], tombstones[ij]);
+                    return;
                 }
                 ij++;
             }
+            // erasure_count++;
+            // std::cout << "could not remove hit max probe on " <<  val << " at index " << ij << " with initial probe " << i << std::endl << std::flush;
+            // problem_children.push_back(val);
         }
         
         template <typename Function>
@@ -172,8 +184,15 @@ class Index_Set_Control {
 
         size_t get_global_max() {return global_probe_max;}
 
+        size_t get_max_probe() {return max_probe;}
+        
+        std::vector<value_type> get_problems() {return problem_children;}
+
         void correctnessCheck(std::vector<value_type> vals) {
             std::vector<value_type> missing;
+            if(vals.size() != size) {
+                std::cout << "Issue with size discrepency - check array len: " << vals.size() << " current array len: " << size << std::endl;
+            }
             for(value_type val : vals) {
                 if(!find(val)) {
                     std::cout << "Cannot find " << val << " by find function" << std::endl;
@@ -181,7 +200,7 @@ class Index_Set_Control {
                     break;
                 }
             }
-            for(int i = 0; i < capacity; i++) {
+            for(size_t i = 0; i < capacity; i++) {
                 for(value_type val : missing) {
                     if(mset[i] == val) {
                         std::cout << "potential tombstone issue: " << val << " | " << mset[i] << " found at " << i << " with tombstone " << tombstones[i] << std::endl;
@@ -193,7 +212,7 @@ class Index_Set_Control {
 
         void count_incore() {
             size_t pagesize = sysconf(_SC_PAGE_SIZE);
-            std::cout << capacity * sizeof(value_type) << " | " << (capacity * sizeof(value_type) + pagesize) / pagesize << std::endl << std::flush; 
+            // std::cout << capacity * sizeof(value_type) << " | " << (capacity * sizeof(value_type) + pagesize) / pagesize << std::endl << std::flush; 
             unsigned char *result = new unsigned char[(capacity * sizeof(value_type) + pagesize) / pagesize];
             mincore(mset, capacity * sizeof(value_type), result);
             size_t count_incore(0);
@@ -211,15 +230,18 @@ class Index_Set_Control {
         int *tombstones;
         size_t capacity = 1024 * 1024;
         size_t size = 0;
-        int max_probe = 1;
+        size_t max_probe = 1;
         size_t global_probe_max = 0;
+        size_t erasure_count = 0;
+
+        std::vector<value_type> problem_children;
 
         int insertLoops = 0;
 
         void resize() {
             // printf("attempting resize from %d to %d at current size %d\n", capacity, capacity*2, size);
             std::vector<value_type> temp_mset;
-            for(int i = 0; i < capacity; i++) {
+            for(size_t i = 0; i < capacity; i++) {
                 if(tombstones[i] == 1) {
                     temp_mset.push_back(mset[i]);
                 }

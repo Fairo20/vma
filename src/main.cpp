@@ -28,7 +28,7 @@
 
 
 // size_t n = 1000000000;
-std::vector<size_t> nvals = {101, 65536, 1048576, 16777216, 67108864, 100000000};
+std::vector<size_t> nvals = {102, 65536, 1048576, 16777216, 67108864, 100000000};
 
 //test
 bool isEven(size_t num) {return num%2==0 ? true : false;}
@@ -94,10 +94,10 @@ srand(1);
 #ifdef index_set_benchmark
     #define benchmark
     #define delete_test
-    size_t delete_window = 100;
-    // #define uset
-    #define index_set
+    size_t delete_window = (size_t)atoi(argv[5]);
     char data = argv[3][0];
+    #define uset
+    #define index_set
     #define index_set_vma
     #define n_index_set
     // if(argv[3][0] == 's') {
@@ -136,7 +136,7 @@ srand(1);
     // Index_Set<size_t> vma_struct;
     // Index_Set<size_t>* vma_struct = new Index_Set<size_t>(std::stoi(argv[1]), std::stoi(argv[2]));
     Index_Set<size_t> vma_struct(std::stoi(argv[1]), std::stoi(argv[2]));
-    std::cout << "level scale: " << std::stoi(argv[1]) << " init probe: " << std::stoi(argv[2]) << std::endl;
+    // std::cout << "level scale: " << std::stoi(argv[1]) << " init probe: " << std::stoi(argv[2]) << std::endl;
     #define vma_test
 #endif
 
@@ -228,11 +228,16 @@ srand(1);
 #ifdef benchmark
     std::vector<size_t> temp;
     int n = std::stoi(argv[4]);
+    // unsigned int gen_size = (unsigned int)-1;
+    std::random_device rd; // obtain a random number from hardware
+    std::mt19937 gen(rd()); // seed the generator
+    std::uniform_int_distribution<> distr(0, RAND_MAX); // define the range
+    // std::cout << "finished gen making" << std::endl;
     for(size_t i = 1; i <= nvals.at(n); i++) {
         if(data == 's')
             temp.push_back(i);
         if(data == 'r')
-            temp.push_back(rand());
+            temp.push_back((size_t)distr(gen));
         if(data == 'd') {
             if(i == (nvals.at(n)/2)) {
                 for(size_t i = 1; i < nvals.at(n)/2; i++) {
@@ -246,6 +251,10 @@ srand(1);
         //     std::cout << i << std::endl;
         // }
     }
+    std::vector<size_t>::const_iterator first = temp.end() - delete_window;
+    std::vector<size_t>::const_iterator last = temp.end();
+    std::vector<size_t> delete_temp(first,last);
+    // std::cout << "finished data making" << std::endl;
 
     std::chrono::time_point<std::chrono::system_clock> m_StartTime;
     std::chrono::time_point<std::chrono::system_clock> m_EndTime;
@@ -259,7 +268,7 @@ srand(1);
         // std::cin >> output;
         // std::cout << i << std::endl;
         #ifdef delete_test
-        if(i > delete_window) {
+        if(i >= delete_window) {
             // vma_struct.remove_index(i-delete_window);
             vma_struct.remove(temp[i-delete_window]);
         }
@@ -282,14 +291,11 @@ srand(1);
     // vma_struct.clear();
     m_EndTime = std::chrono::system_clock::now();
     // vma_struct.count_incore();int
-    std::vector<size_t>::const_iterator first = temp.end() - delete_window;
-    std::vector<size_t>::const_iterator last = temp.end();
-    std::vector<size_t> delete_temp(first,last);
-    #ifdef delete_test
-    vma_struct.correctnessCheck(delete_temp);
-    #else
-    vma_struct.correctnessCheck(temp);
-    #endif
+    // #ifdef delete_test
+    // vma_struct.correctnessCheck(delete_temp);
+    // #else
+    // vma_struct.correctnessCheck(temp);
+    // #endif
     // vma_struct.printLevelInfo();
     vma_struct.clear();
     // for(size_t i = 0; i < n; i++) {
@@ -310,9 +316,10 @@ srand(1);
     for(size_t i = 0; i < nvals.at(n); i++) {
         std_struct.insert(temp[i]);
         #ifdef delete_test
-        if(i > delete_window) {
+        if(i >= delete_window) {
             std_struct.remove(temp[i-delete_window]);
         }
+        // std::cout << "i: " << i << " max probe: " << std_struct.get_max_probe() << std::endl;
         #endif
     }
     // for(size_t i = 0; i < n; i++) {
@@ -329,11 +336,19 @@ srand(1);
     // std_struct.clear();
     m_EndTime = std::chrono::system_clock::now();
 
-    #ifdef delete_test
-    std_struct.correctnessCheck(delete_temp);
-    #else
-    std_struct.correctnessCheck(temp);
-    #endif
+    // std::vector<size_t> problems = std_struct.get_problems();
+    // for(int j = 0; j < temp.size(); j++) {
+        // std::cout << temp[j] << std::endl;
+        // if(std::find(problems.begin(), problems.end(), temp[j]) != problems.end())
+        //     std::cout << "val: " << temp[j] << " index: " << j << std::endl;
+    // }
+    // std::cout << problems.size() << std::endl;
+
+    // #ifdef delete_test
+    // std_struct.correctnessCheck(delete_temp);
+    // #else
+    // std_struct.correctnessCheck(temp);
+    // #endif
     // std_struct.count_incore();
     std_struct.clear();
     // std::cout << std_struct.get_global_max() << std::endl;
@@ -341,6 +356,7 @@ srand(1);
     // bag.for_each(print); 
     printf("std_struct time: %f\n", std_struct_time);
     #endif
+    #ifndef delete_test
     #ifdef uset
     m_StartTime = std::chrono::system_clock::now();
     auto it = std_uset.begin();
@@ -368,6 +384,7 @@ srand(1);
     #endif
     // std_struct.clear();
     // vma_struct.clear();
+    #endif
     #endif
 
 #ifdef benchmark_loop

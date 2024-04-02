@@ -27,7 +27,7 @@ class Index_Set {
 
     public:
         Index_Set(int level_scale = 4, int init_probe = 2) : level_scale(level_scale), init_probe(init_probe) {
-            std::cout << "2 level scale: " << level_scale << " init probe: " << init_probe << std::endl;
+            // std::cout << "2 level scale: " << level_scale << " init probe: " << init_probe << std::endl;
             mset = (value_type*)mmap(NULL, capacity*sizeof(value_type), mprot, mflags, 0, 0);
             if (mset == MAP_FAILED) {
                 handle_error("mmap");   
@@ -293,6 +293,9 @@ class Index_Set {
 
         void correctnessCheck(std::vector<value_type> vals) {
             std::vector<value_type> missing;
+            if(vals.size() != size) {
+                std::cout << "Issue with size discrepency - check array len: " << vals.size() << " current array len: " << size << std::endl;
+            }
             for(value_type val : vals) {
                 if(!find(val)) {
                     std::cout << "Cannot find " << val << " by find function" << std::endl;
